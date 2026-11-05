@@ -21,7 +21,7 @@ export class PurchaseRepositoryAdapter implements PurchaseRepositoryPort {
   async findByProduct(productId: string, ssoId: string): Promise<Purchase[]> {
     const rows = await this.purchases.find({
       where: { productId, ssoId },
-      order: { purchasedAt: 'ASC' },
+      order: { createdAt: 'DESC' },
     });
     return rows.map((r) => PurchaseMapper.toDomain(r));
   }

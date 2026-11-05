@@ -38,7 +38,6 @@ export class ProductUseCases {
       category: cmd.category,
       size: cmd.size ?? null,
       unit: cmd.unit ?? null,
-      unitLabel: cmd.unitLabel ?? null,
       imageBase64: cmd.imageBase64 ?? null,
       isRecurring: cmd.isRecurring ?? false,
       recurringDaysManual: cmd.recurringDaysManual ?? null,
@@ -105,7 +104,6 @@ export class ProductUseCases {
     if (cmd.category !== undefined) p.category = cmd.category;
     if (cmd.size !== undefined) p.size = cmd.size;
     if (cmd.unit !== undefined) p.unit = cmd.unit;
-    if (cmd.unitLabel !== undefined) p.unitLabel = cmd.unitLabel;
     if (cmd.imageBase64 !== undefined) p.imageBase64 = cmd.imageBase64;
     if (cmd.isRecurring !== undefined) p.isRecurring = cmd.isRecurring;
     if (cmd.recurringDaysManual !== undefined) {
@@ -119,6 +117,15 @@ export class ProductUseCases {
   async deleteProduct(productId: string, ssoId: string): Promise<void> {
     await this.getProduct(productId, ssoId);
     await this.products.delete(productId, ssoId);
+  }
+
+  async excludeProductFromMonth(
+    productId: string,
+    ssoId: string,
+    month: string,
+  ): Promise<void> {
+    await this.getProduct(productId, ssoId);
+    await this.products.excludeFromMonth(productId, ssoId, month);
   }
 
   /** Record a purchase; buying restocks the product (status → in_stock). */
@@ -163,10 +170,12 @@ export class ProductUseCases {
     ssoId: string,
     month: string,
   ): Promise<Product[]> {
-    const [products, allPurchases] = await Promise.all([
+    const [products, allPurchases, excludedProductIds] = await Promise.all([
       this.products.findAll(ssoId),
       this.purchases.findAllByOwner(ssoId),
+      this.products.findExcludedProductIds(ssoId, month),
     ]);
+    const excluded = new Set(excludedProductIds);
 
     // per product: earliest purchase month + the set of months with a purchase
     const firstMonth = new Map<string, string>(); // productId → yyyy-mm
@@ -184,6 +193,7 @@ export class ProductUseCases {
     }
 
     return products.filter((prod) => {
+      if (excluded.has(prod.productId)) return false;
       const first = firstMonth.get(prod.productId);
       if (first === undefined) return false; // never purchased → not "in use"
       const boughtThisMonth =

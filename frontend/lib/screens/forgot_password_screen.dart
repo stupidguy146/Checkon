@@ -53,61 +53,63 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 onTap: () => Navigator.pop(context),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_sent) ...[
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.10),
-                        borderRadius: AppRadius.rMd,
+            AuthFlowEntrance(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_sent) ...[
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.10),
+                          borderRadius: AppRadius.rMd,
+                        ),
+                        child: Text(
+                          s.resetSentInfo,
+                          style: AppType.bodyMedium
+                              .copyWith(color: AppColors.neutral800),
+                        ),
                       ),
-                      child: Text(
-                        s.resetSentInfo,
-                        style: AppType.bodyMedium
-                            .copyWith(color: AppColors.neutral800),
+                      const SizedBox(height: AppSpacing.lg),
+                      FilledButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ResetPasswordScreen()),
+                        ),
+                        child: Text(s.haveTokenAlready),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    FilledButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ResetPasswordScreen()),
+                    ] else ...[
+                      Text(
+                        s.forgotHint,
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      child: Text(s.haveTokenAlready),
-                    ),
-                  ] else ...[
-                    Text(
-                      s.forgotHint,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    TextField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        labelText: s.email,
-                        prefixIcon: const Icon(Icons.mail_outline_rounded),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          labelText: s.email,
+                          prefixIcon: const Icon(Icons.mail_outline_rounded),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    FilledButton(
-                      onPressed: _sending ? null : _submit,
-                      child: _sending
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2.5, color: Colors.white),
-                            )
-                          : Text(s.sendResetLink),
-                    ),
+                      const SizedBox(height: AppSpacing.xl),
+                      FilledButton(
+                        onPressed: _sending ? null : _submit,
+                        child: _sending
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Text(s.sendResetLink),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -176,61 +178,64 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 onTap: () => Navigator.pop(context),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_error != null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.10),
-                          borderRadius: AppRadius.rMd,
+            AuthFlowEntrance(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_error != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.10),
+                            borderRadius: AppRadius.rMd,
+                          ),
+                          child: Text(
+                              s.errorForCode(_error!.code,
+                                  fallback: _error!.message),
+                              style: AppType.bodyMedium
+                                  .copyWith(color: AppColors.danger)),
                         ),
-                        child: Text(
-                            s.errorForCode(_error!.code,
-                                fallback: _error!.message),
-                            style: AppType.bodyMedium
-                                .copyWith(color: AppColors.danger)),
+                      TextFormField(
+                        controller: _tokenCtrl,
+                        decoration: InputDecoration(
+                          labelText: s.tokenFromEmail,
+                          prefixIcon: const Icon(Icons.vpn_key_outlined),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? s.enterToken
+                            : null,
                       ),
-                    TextFormField(
-                      controller: _tokenCtrl,
-                      decoration: InputDecoration(
-                        labelText: s.tokenFromEmail,
-                        prefixIcon: const Icon(Icons.vpn_key_outlined),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _newCtrl,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: s.newPasswordMin8,
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
+                        ),
+                        validator: (v) => (v == null || v.length < 8)
+                            ? s.newPasswordMin8Rule
+                            : null,
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? s.enterToken : null,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: _newCtrl,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: s.newPasswordMin8,
-                        prefixIcon: const Icon(Icons.lock_reset_rounded),
+                      const SizedBox(height: AppSpacing.xl),
+                      FilledButton(
+                        onPressed: _saving ? null : _submit,
+                        child: _saving
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Text(s.resetTitle),
                       ),
-                      validator: (v) => (v == null || v.length < 8)
-                          ? s.newPasswordMin8Rule
-                          : null,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    FilledButton(
-                      onPressed: _saving ? null : _submit,
-                      child: _saving
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2.5, color: Colors.white),
-                            )
-                          : Text(s.resetTitle),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

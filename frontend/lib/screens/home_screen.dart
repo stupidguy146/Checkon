@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/customer_profile.dart';
 import '../models/expiring_item.dart';
+import '../models/product.dart';
 import '../services/api_service.dart';
 import '../services/customer_service.dart';
 import '../services/notification_read_store.dart';
@@ -17,6 +18,7 @@ import '../widgets/notification_bell.dart';
 import '../i18n/locale_scope.dart';
 import '../state/data_refresh.dart';
 import 'item_detail_screen.dart';
+import 'product_detail_screen.dart';
 
 /// Checkon home dashboard built from household items and analytics.
 class HomeScreen extends StatefulWidget {
@@ -80,13 +82,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<_HomeData> _load() async {
     final summaryFuture = _api!.getSummary();
     final expiringFuture = _api!.getExpiringSoon(days: 30);
+    final productsToBuyFuture = _api!.getProductsToBuy();
     final profileFuture = _loadProfile();
     final results = await Future.wait<Object?>(
-      [summaryFuture, expiringFuture, profileFuture],
+      [summaryFuture, expiringFuture, productsToBuyFuture, profileFuture],
     );
     final summary = results[0] as AnalyticsSummary;
     final expiring = results[1] as List<ExpiringItem>;
-    final profile = results[2] as CustomerProfile?;
+    final productsToBuy = results[2] as List<Product>;
+    final profile = results[3] as CustomerProfile?;
 
     // keep OS reminders in sync on every home load (app start / after login /
     // after add-edit-delete via DataScope). no-op on web.
@@ -121,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
         total: summary.grandTotal,
         totalItems: summary.totalItems,
         expiring: expiring,
+        productsToBuy: productsToBuy,
         unreadCount: unread,
         profile: profile);
   }
@@ -172,6 +177,11 @@ class _HomeScreenState extends State<HomeScreen> {
             final attention = [...data.expiring]..sort((a, b) =>
                 (a.daysUntilExpiry ?? 9999)
                     .compareTo(b.daysUntilExpiry ?? 9999));
+            final productsToBuy = [...data.productsToBuy]..sort((a, b) {
+                final statusRank = (a.status == ProductStatus.out ? 0 : 1)
+                    .compareTo(b.status == ProductStatus.out ? 0 : 1);
+                return statusRank != 0 ? statusRank : a.name.compareTo(b.name);
+              });
             final name = data.profile?.firstName ?? '';
 
             return ListView(
@@ -190,7 +200,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: _HomeSummaryCard(
                       totalItems: '${data.totalItems}',
-                      attentionCount: '${attention.length}',
+                      attentionCount:
+                          '${attention.length + productsToBuy.length}',
                       itemsLabel: s.statAllItems,
                       attentionLabel: s.statLowItems,
                     ),
@@ -209,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                   ),
                 ),
-                if (attention.isEmpty)
+                if (attention.isEmpty && productsToBuy.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: AppCard(
@@ -223,12 +234,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   )
-                else
-                  ...attention.take(5).map((it) => Padding(
+                else ...[
+                  ...productsToBuy.take(5).map((product) => Padding(
                         padding: const EdgeInsets.fromLTRB(
                             AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
-                        child: _AttentionCard(item: it, df: df),
+                        child: _ProductStatusCard(product: product),
                       )),
+                  ...attention
+                      .take((5 - productsToBuy.length).clamp(0, 5).toInt())
+                      .map((it) => Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
+                            child: _AttentionCard(item: it, df: df),
+                          )),
+                ],
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: _BudgetCard(spent: data.total, baht: baht),
@@ -247,12 +266,14 @@ class _HomeData {
   final double total;
   final int totalItems;
   final List<ExpiringItem> expiring;
+  final List<Product> productsToBuy;
   final int unreadCount;
   final CustomerProfile? profile;
   _HomeData(
       {required this.total,
       required this.totalItems,
       required this.expiring,
+      required this.productsToBuy,
       this.unreadCount = 0,
       this.profile});
 }
@@ -315,24 +336,10 @@ class _GreetingHeader extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.94),
-                          borderRadius: AppRadius.rLg,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                          boxShadow: AppShadows.sm,
-                        ),
-                        child: Image.asset(
-                          'assets/images/logos/checkon_logo.png',
-                          height: 38,
-                          fit: BoxFit.contain,
-                        ),
+                      Image.asset(
+                        'assets/images/logos/953b0995-0966-4844-9cac-afe275ac9282.png',
+                        height: 64,
+                        fit: BoxFit.contain,
                       ),
                       const Spacer(),
                       NotificationBell(
@@ -350,14 +357,27 @@ class _GreetingHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    question,
-                    style: AppType.headlineMedium.copyWith(
-                      color: isDark ? Colors.white : AppColors.brand900,
-                      height: 1.12,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.home_rounded,
+                        size: 28,
+                        color: isDark ? Colors.white : AppColors.brand900,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          question,
+                          style: AppType.headlineMedium.copyWith(
+                            color: isDark ? Colors.white : AppColors.brand900,
+                            height: 1.12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -621,6 +641,74 @@ class _AttentionCard extends StatelessWidget {
             ),
           ),
           StatusChip(status: status, label: statusLabel),
+          const SizedBox(width: AppSpacing.xs),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductStatusCard extends StatelessWidget {
+  final Product product;
+  const _ProductStatusCard({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.strings;
+    final isOut = product.status == ProductStatus.out;
+    final color = isOut ? AppColors.danger : AppColors.warning;
+    final label = isOut ? s.productStatusOut : s.productStatusLow;
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProductDetailScreen(productId: product.productId),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isOut ? AppColors.coralTint : AppColors.amberTint,
+              borderRadius: AppRadius.rMd,
+            ),
+            child: Icon(
+              isOut
+                  ? Icons.remove_shopping_cart_rounded
+                  : Icons.warning_amber_rounded,
+              color: color,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.name,
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 2),
+                Text(
+                  s.toBuyTitle,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          StatusChip(
+            status: isOut ? StockStatus.out : StockStatus.shouldBuy,
+            label: label,
+          ),
           const SizedBox(width: AppSpacing.xs),
           Icon(
             Icons.chevron_right_rounded,

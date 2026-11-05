@@ -13,7 +13,6 @@ export interface HouseholdItemProps {
   size: string | null; // e.g. "1.5"
   unit: string | null; // e.g. "ลิตร"
   quantity: number;
-  unitLabel: string | null; // e.g. "ขวด"
   price: number;
   store: string | null;
   purchaseDate: string | null; // ISO yyyy-mm-dd
@@ -34,7 +33,6 @@ export class HouseholdItem {
   size: string | null;
   unit: string | null;
   quantity: number;
-  unitLabel: string | null;
   price: number;
   store: string | null;
   purchaseDate: string | null;
@@ -54,7 +52,6 @@ export class HouseholdItem {
     this.size = p.size;
     this.unit = p.unit;
     this.quantity = p.quantity;
-    this.unitLabel = p.unitLabel;
     this.price = p.price;
     this.store = p.store;
     this.purchaseDate = p.purchaseDate;

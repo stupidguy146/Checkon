@@ -17,6 +17,7 @@ class AuthService extends ChangeNotifier {
 
   AuthUser? _user;
   bool _initializing = true;
+  bool _requiresPinSetup = false;
   Future<bool>? _refreshFuture;
 
   AuthService({http.Client? client, TokenStore? store})
@@ -26,6 +27,11 @@ class AuthService extends ChangeNotifier {
   AuthUser? get user => _user;
   bool get isAuthenticated => tokens.hasTokens;
   bool get initializing => _initializing;
+  bool get requiresPinSetup => _requiresPinSetup;
+
+  void completePinSetup() {
+    _requiresPinSetup = false;
+  }
 
   Uri _auth(String path) =>
       Uri.parse('${AppConfig.gatewayBaseUrl}${AppConfig.authPrefix}$path');
@@ -119,6 +125,7 @@ class AuthService extends ChangeNotifier {
       }),
     );
     _ensureOk(res);
+    _requiresPinSetup = true;
     await _applyAuthResult(res.body);
   }
 
@@ -245,6 +252,7 @@ class AuthService extends ChangeNotifier {
   Future<void> logout() async {
     await tokens.clear();
     _user = null;
+    _requiresPinSetup = false;
     notifyListeners();
   }
 

@@ -86,13 +86,15 @@ export class AnalyticsUseCases {
    * including the current month (oldest → newest). Same data source as
    * summaryByMonth, so the series and the per-month summary always agree.
    */
-  async spendByMonth(ssoId: string, months: number) {
+  async spendByMonth(ssoId: string, months: number, endMonth?: string) {
     const n = Math.max(1, Math.min(24, Math.floor(months) || 6));
-    const now = new Date();
+    const [year, month] = endMonth
+      ? endMonth.split('-').map(Number)
+      : [new Date().getUTCFullYear(), new Date().getUTCMonth() + 1];
     // build the list of yyyy-mm keys, oldest first
     const keys: string[] = [];
     for (let i = n - 1; i >= 0; i--) {
-      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const d = new Date(Date.UTC(year, month - 1 - i, 1));
       keys.push(d.toISOString().slice(0, 7));
     }
     // fetch each month's purchases in parallel, then total each month

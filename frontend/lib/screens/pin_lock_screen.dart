@@ -67,86 +67,69 @@ class _PinLockScreenState extends State<PinLockScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              GradientHeader(
+              AuthPinHeader(
                 title: s.enterPinTitle,
                 subtitle: s.appTitle,
-                logoBackground: false,
-                logoWidget: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.aqua,
-                    borderRadius: AppRadius.rXl,
-                    boxShadow: AppShadows.brandGlow(AppColors.aqua),
-                  ),
-                  child: const Icon(
-                    Icons.lock_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                logoHeight: 56,
-                centerTitle: true,
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.xl + AppSpacing.md,
-                  AppSpacing.xl,
-                  AppSpacing.xl + AppSpacing.md,
-                ),
               ),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, contentConstraints) {
-                    final keypadHeight =
-                        contentConstraints.maxHeight - 28 - AppSpacing.md;
-                    final maxKeySize = keypadHeight >= 482
-                        ? 86.0
-                        : ((keypadHeight - 40) / 5.6)
-                            .clamp(40.0, 86.0)
-                            .toDouble();
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              height: 28,
-                              child: Center(
-                                child: Text(
-                                  _error ? s.wrongPin : s.enterSixDigitPin,
-                                  style: AppType.bodyMedium.copyWith(
-                                    color: _error
-                                        ? AppColors.danger
-                                        : AppColors.neutral600,
+                child: AuthFlowEntrance(
+                  child: LayoutBuilder(
+                    builder: (context, contentConstraints) {
+                      final keypadHeight =
+                          contentConstraints.maxHeight - 28 - AppSpacing.md;
+                      final maxKeySize = keypadHeight >= 482
+                          ? 86.0
+                          : ((keypadHeight - 40) / 5.6)
+                              .clamp(40.0, 86.0)
+                              .toDouble();
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                          ),
+                          child: AppCard(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 28,
+                                  child: Center(
+                                    child: Text(
+                                      _error ? s.wrongPin : s.enterSixDigitPin,
+                                      style: AppType.bodyMedium.copyWith(
+                                        color: _error
+                                            ? AppColors.danger
+                                            : AppColors.neutral600,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(height: AppSpacing.md),
+                                PinPad(
+                                  value: _pin,
+                                  maxKeySize: maxKeySize,
+                                  error: _error,
+                                  onChanged: (v) => setState(() {
+                                    _pin = v;
+                                    _error = false;
+                                  }),
+                                  onCompleted: _onCompleted,
+                                  leadingKey: _biometricAvailable
+                                      ? const Icon(Icons.fingerprint_rounded,
+                                          color: AppColors.brand500)
+                                      : null,
+                                  onLeadingKey: _biometricAvailable
+                                      ? _tryBiometric
+                                      : null,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: AppSpacing.md),
-                            PinPad(
-                              value: _pin,
-                              maxKeySize: maxKeySize,
-                              error: _error,
-                              onChanged: (v) => setState(() {
-                                _pin = v;
-                                _error = false;
-                              }),
-                              onCompleted: _onCompleted,
-                              leadingKey: _biometricAvailable
-                                  ? const Icon(Icons.fingerprint_rounded,
-                                      color: AppColors.brand500)
-                                  : null,
-                              onLeadingKey:
-                                  _biometricAvailable ? _tryBiometric : null,
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ],

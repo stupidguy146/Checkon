@@ -7,7 +7,6 @@ export interface CreateProductCommand {
   category: Category;
   size?: string | null;
   unit?: string | null;
-  unitLabel?: string | null;
   imageBase64?: string | null;
   isRecurring?: boolean;
   recurringDaysManual?: number | null;
@@ -27,7 +26,6 @@ export interface UpdateProductCommand {
   category?: Category;
   size?: string | null;
   unit?: string | null;
-  unitLabel?: string | null;
   imageBase64?: string | null;
   isRecurring?: boolean;
   recurringDaysManual?: number | null;

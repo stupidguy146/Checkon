@@ -15,7 +15,6 @@ export interface ProductProps {
   category: Category;
   size: string | null;
   unit: string | null;
-  unitLabel: string | null;
   imageBase64: string | null;
   isRecurring: boolean;
   recurringDaysManual: number | null; // fallback cycle when stats insufficient
@@ -32,7 +31,6 @@ export class Product {
   category: Category;
   size: string | null;
   unit: string | null;
-  unitLabel: string | null;
   imageBase64: string | null;
   isRecurring: boolean;
   recurringDaysManual: number | null;
@@ -48,7 +46,6 @@ export class Product {
     this.category = p.category;
     this.size = p.size;
     this.unit = p.unit;
-    this.unitLabel = p.unitLabel;
     this.imageBase64 = p.imageBase64;
     this.isRecurring = p.isRecurring;
     this.recurringDaysManual = p.recurringDaysManual;

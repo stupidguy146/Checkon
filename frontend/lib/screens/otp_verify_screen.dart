@@ -135,88 +135,90 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                 onTap: () => Navigator.pop(context),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.sm),
-                  const Icon(Icons.mark_email_unread_outlined,
-                      size: 64, color: AppColors.brand500),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    s.otpSentTo(widget.email),
-                    textAlign: TextAlign.center,
-                    style: AppType.bodyLarge.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (errorText != null) AuthErrorBanner(message: errorText),
-                  TextField(
-                    controller: _otpCtrl,
-                    focusNode: _focus,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: 6,
-                    style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 12,
-                        color: Theme.of(context).colorScheme.onSurface),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
-                    ],
-                    decoration: InputDecoration(
-                      counterText: '',
-                      hintText: '••••••',
-                      labelText: s.enterOtp,
+            AuthFlowEntrance(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.sm),
+                    const Icon(Icons.mark_email_unread_outlined,
+                        size: 64, color: AppColors.brand500),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      s.otpSentTo(widget.email),
+                      textAlign: TextAlign.center,
+                      style: AppType.bodyLarge.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface),
                     ),
-                    onChanged: (v) {
-                      if (v.length == 6 && !_loading) _verify();
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    s.otpDevHint,
-                    textAlign: TextAlign.center,
-                    style:
-                        AppType.caption.copyWith(color: AppColors.neutral400),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  FilledButton(
-                    onPressed: _loading ? null : _verify,
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5, color: Colors.white),
-                          )
-                        : Text(s.verifyOtpButton),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(s.didntGetCode,
-                          style: Theme.of(context).textTheme.bodyMedium),
-                      TextButton(
-                        onPressed: canResend ? _resend : null,
-                        child: _resending
-                            ? const SizedBox(
-                                height: 16,
-                                width: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(_secondsLeft > 0
-                                ? s.resendOtpIn(_secondsLeft)
-                                : s.resendOtp),
+                    const SizedBox(height: AppSpacing.xl),
+                    if (errorText != null) AuthErrorBanner(message: errorText),
+                    TextField(
+                      controller: _otpCtrl,
+                      focusNode: _focus,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 6,
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 12,
+                          color: Theme.of(context).colorScheme.onSurface),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(6),
+                      ],
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: '••••••',
+                        labelText: s.enterOtp,
                       ),
-                    ],
-                  ),
-                ],
+                      onChanged: (v) {
+                        if (v.length == 6 && !_loading) _verify();
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      s.otpDevHint,
+                      textAlign: TextAlign.center,
+                      style:
+                          AppType.caption.copyWith(color: AppColors.neutral400),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton(
+                      onPressed: _loading ? null : _verify,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.5, color: Colors.white),
+                            )
+                          : Text(s.verifyOtpButton),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(s.didntGetCode,
+                            style: Theme.of(context).textTheme.bodyMedium),
+                        TextButton(
+                          onPressed: canResend ? _resend : null,
+                          child: _resending
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Text(_secondsLeft > 0
+                                  ? s.resendOtpIn(_secondsLeft)
+                                  : s.resendOtp),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

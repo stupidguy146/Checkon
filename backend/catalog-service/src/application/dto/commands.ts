@@ -7,7 +7,6 @@ export interface CreateItemCommand {
   size?: string | null;
   unit?: string | null;
   quantity: number;
-  unitLabel?: string | null;
   price: number;
   store?: string | null;
   purchaseDate?: string | null;
@@ -24,7 +23,6 @@ export interface UpdateItemCommand {
   size?: string | null;
   unit?: string | null;
   quantity?: number;
-  unitLabel?: string | null;
   price?: number;
   store?: string | null;
   purchaseDate?: string | null;

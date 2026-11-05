@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../models/household_item.dart' show ItemCategory, categoryToString;
+import '../models/product.dart';
 import '../services/api_service.dart';
 import '../services/product_lookup_service.dart';
 import '../theme/app_tokens.dart';
@@ -20,7 +21,12 @@ import 'add_edit_item_screen.dart' show categoryIcon;
 /// Returns `true` via Navigator.pop when a product was created.
 class AddProductScreen extends StatefulWidget {
   final bool autoScan;
-  const AddProductScreen({super.key, this.autoScan = false});
+  final Product? initialProduct;
+  const AddProductScreen({
+    super.key,
+    this.autoScan = false,
+    this.initialProduct,
+  });
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -34,9 +40,24 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _name = TextEditingController();
   final _size = TextEditingController();
   final _unit = TextEditingController();
-  final _unitLabel = TextEditingController();
   ItemCategory _category = ItemCategory.other;
   bool _recurring = false;
+  static const _commonSizeUnits = [
+    'มล.',
+    'ลิตร',
+    'มก.',
+    'กรัม',
+    'กก.',
+    'ชิ้น',
+    'แพ็ค',
+    'ขวด',
+    'กระป๋อง',
+    'หลอด',
+    'กล่อง',
+    'ถุง',
+    'ฟอง',
+    'แผ่น',
+  ];
   final _recurringDays = TextEditingController();
 
   // first purchase (optional)
@@ -56,6 +77,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
   bool _didAutoScan = false;
 
   @override
+  void initState() {
+    super.initState();
+    final product = widget.initialProduct;
+    if (product != null) {
+      _name.text = product.name;
+      _size.text = product.size ?? '';
+      _unit.text = product.unit ?? '';
+      _category = product.category;
+      _recurring = product.isRecurring;
+      _recurringDays.text = product.recurringDaysManual?.toString() ?? '';
+      _image = product.imageBase64;
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _api ??= ApiService(auth: AuthScope.of(context));
@@ -71,7 +107,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _name.dispose();
     _size.dispose();
     _unit.dispose();
-    _unitLabel.dispose();
     _recurringDays.dispose();
     _qty.dispose();
     _price.dispose();
@@ -151,7 +186,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   Future<void> _pickPurchaseDate() async {
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveDatePicker(
       context: context,
       initialDate: _purchaseDate,
       firstDate: DateTime(2020),
@@ -175,8 +210,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
       'category': categoryToString(_category),
       'size': _size.text.trim().isEmpty ? null : _size.text.trim(),
       'unit': _unit.text.trim().isEmpty ? null : _unit.text.trim(),
-      'unitLabel':
-          _unitLabel.text.trim().isEmpty ? null : _unitLabel.text.trim(),
       'imageBase64': _image,
       'isRecurring': _recurring,
       'recurringDaysManual': _recurring ? recurringDays : null,
@@ -194,10 +227,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
 
     try {
-      await _api!.createProduct(productBody);
+      final existingProduct = widget.initialProduct;
+      if (existingProduct != null) {
+        await _api!.updateProduct(existingProduct.productId, productBody);
+      } else {
+        await _api!.createProduct(productBody);
+      }
       dataRefresh.bump();
       if (!mounted) return;
-      AppSnackBar.show(messenger, s.productSaved, SnackKind.success);
+      AppSnackBar.show(
+        messenger,
+        widget.initialProduct == null ? s.productSaved : s.productUpdated,
+        SnackKind.success,
+      );
       navigator.pop(true);
     } catch (e) {
       if (mounted) {
@@ -205,6 +247,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
         setState(() => _saving = false);
       }
     }
+  }
+
+  List<String> get _sizeUnitOptions {
+    final options = [..._commonSizeUnits];
+    final current = _unit.text.trim();
+    if (current.isNotEmpty && !options.contains(current)) {
+      options.insert(0, current);
+    }
+    return options;
+  }
+
+  String? get _selectedSizeUnit {
+    final unit = _unit.text.trim();
+    return unit.isEmpty ? null : unit;
   }
 
   @override
@@ -216,7 +272,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
       body: Column(
         children: [
           GradientHeader(
-            title: s.addProductTitle,
+            title: widget.initialProduct == null
+                ? s.addProductTitle
+                : s.editProductTitle,
             subtitle: s.productMasterTitle,
             leading: HeaderIconButton(
               icon: Icons.chevron_left_rounded,
@@ -229,252 +287,270 @@ class _AddProductScreenState extends State<AddProductScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
-              _SectionLabel(s.productInfoSection),
-              const SizedBox(height: AppSpacing.md),
-              // product image: tap to pick/change from gallery (also auto-filled
-              // from a barcode scan). Remove button appears when set.
-              Center(
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: AppColors.brand100,
-                          borderRadius: AppRadius.rLg,
-                          image: _imageBytes != null
-                              ? DecorationImage(
-                                  image: MemoryImage(_imageBytes!),
-                                  fit: BoxFit.cover)
-                              : null,
-                        ),
-                        child: _imageBytes == null
-                            ? const Icon(Icons.add_a_photo_outlined,
-                                color: AppColors.brand500, size: 30)
-                            : null,
-                      ),
-                    ),
-                    if (_imageBytes != null)
-                      TextButton.icon(
-                        onPressed: _removeImage,
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            size: 18),
-                        label: Text(s.removePhoto),
-                      )
-                    else
-                      TextButton(
-                        onPressed: _pickImage,
-                        child: Text(s.changePhoto),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              OutlinedButton.icon(
-                onPressed: _lookingUp ? null : _scanBarcode,
-                icon: _lookingUp
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2.2),
-                      )
-                    : const Icon(Icons.qr_code_scanner_rounded, size: 20),
-                label: Text(s.scanBarcode),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _name,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(labelText: s.itemName),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? s.enterProductName : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              DropdownButtonFormField<ItemCategory>(
-                initialValue: _category,
-                decoration: InputDecoration(
-                  labelText: s.categoryLabel,
-                  prefixIcon: Icon(categoryIcon(_category)),
-                ),
-                dropdownColor: Theme.of(context).cardTheme.color,
-                borderRadius: AppRadius.rMd,
-                // closed field shows the label only — the category icon is
-                // already the prefixIcon (avoid showing two icons).
-                selectedItemBuilder: (context) => ItemCategory.values
-                    .map((c) => Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(s.categoryName(categoryToString(c))),
-                        ))
-                    .toList(),
-                items: [
-                  for (final c in ItemCategory.values)
-                    DropdownMenuItem(
-                      value: c,
-                      child: Row(
-                        children: [
-                          Icon(categoryIcon(c),
-                              size: 20, color: AppColors.brand500),
-                          const SizedBox(width: AppSpacing.md),
-                          Text(s.categoryName(categoryToString(c))),
-                        ],
-                      ),
-                    ),
-                ],
-                onChanged: (v) =>
-                    setState(() => _category = v ?? ItemCategory.other),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _size,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(labelText: s.sizeLabel),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _unit,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(labelText: s.unitFieldLabel),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _unitLabel,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(labelText: s.unitCountLabel),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _recurring,
-                onChanged: (v) => setState(() => _recurring = v),
-                title: Text(s.recurringLabel,
-                    style: Theme.of(context).textTheme.titleMedium),
-              ),
-              if (_recurring) ...[
-                const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  controller: _recurringDays,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: s.recurringDaysLabel,
-                    hintText: s.recurringDaysHint,
-                    suffixText: s.daysUnit,
-                  ),
-                  validator: (v) {
-                    if (!_recurring) return null;
-                    final t = (v ?? '').trim();
-                    if (t.isEmpty) return null; // manual cycle is optional
-                    final n = int.tryParse(t);
-                    if (n == null || n < 1 || n > 3650) {
-                      return s.recurringDaysInvalid;
-                    }
-                    return null;
-                  },
-                ),
-              ],
-
-              const SizedBox(height: AppSpacing.xl),
-              _SectionLabel(s.firstPurchaseSection),
-              const SizedBox(height: AppSpacing.xs),
-              Text(s.firstPurchaseHint,
-                  style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: AppSpacing.sm),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _addPurchase,
-                onChanged: (v) => setState(() => _addPurchase = v),
-                title: Text(s.firstPurchaseSection,
-                    style: Theme.of(context).textTheme.titleMedium),
-              ),
-              if (_addPurchase) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _qty,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(labelText: s.quantity),
-                        validator: (v) {
-                          if (!_addPurchase) return null;
-                          final n = int.tryParse((v ?? '').trim());
-                          if (n == null || n < 1) return s.positiveIntegerOnly;
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _price,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(labelText: s.unitPrice),
-                        validator: (v) {
-                          if (!_addPurchase) return null;
-                          final t = (v ?? '').trim();
-                          if (t.isEmpty) return null;
-                          if (double.tryParse(t) == null) {
-                            return s.decimalNumberOnly;
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _store,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(labelText: s.storeLabel),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _buyer,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(labelText: s.buyerLabel),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                InkWell(
-                  onTap: _pickPurchaseDate,
-                  borderRadius: AppRadius.rMd,
-                  child: InputDecorator(
-                    decoration:
-                        InputDecoration(labelText: s.purchaseDateLabel),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  _SectionLabel(s.productInfoSection),
+                  const SizedBox(height: AppSpacing.md),
+                  // product image: tap to pick/change from gallery (also auto-filled
+                  // from a barcode scan). Remove button appears when set.
+                  Center(
+                    child: Column(
                       children: [
-                        Text(df.format(_purchaseDate)),
-                        const Icon(Icons.calendar_today_rounded, size: 18),
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: AppColors.brand100,
+                              borderRadius: AppRadius.rLg,
+                              image: _imageBytes != null
+                                  ? DecorationImage(
+                                      image: MemoryImage(_imageBytes!),
+                                      fit: BoxFit.cover)
+                                  : null,
+                            ),
+                            child: _imageBytes == null
+                                ? const Icon(Icons.add_a_photo_outlined,
+                                    color: AppColors.brand500, size: 30)
+                                : null,
+                          ),
+                        ),
+                        if (_imageBytes != null)
+                          TextButton.icon(
+                            onPressed: _removeImage,
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 18),
+                            label: Text(s.removePhoto),
+                          )
+                        else
+                          TextButton(
+                            onPressed: _pickImage,
+                            child: Text(s.changePhoto),
+                          ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.md),
+                  if (widget.initialProduct == null)
+                    OutlinedButton.icon(
+                      onPressed: _lookingUp ? null : _scanBarcode,
+                      icon: _lookingUp
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2.2),
+                            )
+                          : const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                      label: Text(s.scanBarcode),
+                    ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: _name,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(labelText: s.itemName),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? s.enterProductName
+                        : null,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AdaptiveDropdownFormField<ItemCategory>(
+                    initialValue: _category,
+                    decoration: InputDecoration(
+                      labelText: s.categoryLabel,
+                      prefixIcon: Icon(categoryIcon(_category)),
+                    ),
+                    dropdownColor: Theme.of(context).cardTheme.color,
+                    borderRadius: AppRadius.rMd,
+                    // closed field shows the label only — the category icon is
+                    // already the prefixIcon (avoid showing two icons).
+                    selectedItemBuilder: (context) => ItemCategory.values
+                        .map((c) => Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(s.categoryName(categoryToString(c))),
+                            ))
+                        .toList(),
+                    items: [
+                      for (final c in ItemCategory.values)
+                        DropdownMenuItem(
+                          value: c,
+                          child: Row(
+                            children: [
+                              Icon(categoryIcon(c),
+                                  size: 20, color: AppColors.brand500),
+                              const SizedBox(width: AppSpacing.md),
+                              Text(s.categoryName(categoryToString(c))),
+                            ],
+                          ),
+                        ),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _category = v ?? ItemCategory.other),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _size,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(labelText: s.sizeLabel),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: AdaptiveDropdownFormField<String>(
+                          initialValue: _selectedSizeUnit,
+                          decoration:
+                              InputDecoration(labelText: s.unitFieldLabel),
+                          dropdownColor: Theme.of(context).cardTheme.color,
+                          borderRadius: AppRadius.rMd,
+                          items: [
+                            for (final unit in _sizeUnitOptions)
+                              DropdownMenuItem(
+                                value: unit,
+                                child: Text(unit),
+                              ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _unit.text = value ?? '';
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: _recurring,
+                    onChanged: (v) => setState(() => _recurring = v),
+                    title: Text(s.recurringLabel,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  if (_recurring) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _recurringDays,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: s.recurringDaysLabel,
+                        hintText: s.recurringDaysHint,
+                        suffixText: s.daysUnit,
+                      ),
+                      validator: (v) {
+                        if (!_recurring) return null;
+                        final t = (v ?? '').trim();
+                        if (t.isEmpty) return null; // manual cycle is optional
+                        final n = int.tryParse(t);
+                        if (n == null || n < 1 || n > 3650) {
+                          return s.recurringDaysInvalid;
+                        }
 
-              const SizedBox(height: AppSpacing.xl),
-              FilledButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.4),
-                      )
-                    : Text(s.save),
-              ),
+                        return null;
+                      },
+                    ),
+                  ],
+
+                  if (widget.initialProduct == null) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    _SectionLabel(s.firstPurchaseSection),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(s.firstPurchaseHint,
+                        style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: AppSpacing.sm),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: _addPurchase,
+                      onChanged: (v) => setState(() => _addPurchase = v),
+                      title: Text(s.firstPurchaseSection,
+                          style: Theme.of(context).textTheme.titleMedium),
+                    ),
+                  ],
+                  if (widget.initialProduct == null && _addPurchase) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _qty,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(labelText: s.quantity),
+                            validator: (v) {
+                              if (!_addPurchase) return null;
+                              final n = int.tryParse((v ?? '').trim());
+                              if (n == null || n < 1) {
+                                return s.positiveIntegerOnly;
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _price,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(labelText: s.unitPrice),
+                            validator: (v) {
+                              if (!_addPurchase) return null;
+                              final t = (v ?? '').trim();
+                              if (t.isEmpty) return null;
+                              if (double.tryParse(t) == null) {
+                                return s.decimalNumberOnly;
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _store,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(labelText: s.storeLabel),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _buyer,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(labelText: s.buyerLabel),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    InkWell(
+                      onTap: _pickPurchaseDate,
+                      borderRadius: AppRadius.rMd,
+                      child: InputDecorator(
+                        decoration:
+                            InputDecoration(labelText: s.purchaseDateLabel),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(df.format(_purchaseDate)),
+                            const Icon(Icons.calendar_today_rounded, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: AppSpacing.xl),
+                  FilledButton(
+                    onPressed: _saving ? null : _save,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2.4),
+                          )
+                        : Text(widget.initialProduct == null
+                            ? s.save
+                            : s.saveChanges),
+                  ),
                 ],
               ),
             ),

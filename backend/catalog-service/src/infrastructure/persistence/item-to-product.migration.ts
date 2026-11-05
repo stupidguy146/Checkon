@@ -59,7 +59,6 @@ export class ItemToProductMigration implements OnModuleInit {
         category: it.category,
         size: it.size,
         unit: it.unit,
-        unitLabel: it.unitLabel,
         imageBase64: it.imageBase64,
         isRecurring: it.notifyRecurring ?? false,
         recurringDaysManual: it.recurringDays ?? null,

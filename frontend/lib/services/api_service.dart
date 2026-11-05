@@ -107,8 +107,8 @@ class ApiService {
 
   /// Products needing restock — user-driven status low/out (out first).
   Future<List<Product>> getProductsToBuy() async {
-    final res = await _withAuthRetry(() =>
-        _client.get(_catalog('/products/to-buy'), headers: _headers()));
+    final res = await _withAuthRetry(
+        () => _client.get(_catalog('/products/to-buy'), headers: _headers()));
     _ensureOk(res);
     final list = jsonDecode(res.body) as List;
     return list
@@ -126,9 +126,8 @@ class ApiService {
   /// Products "in use" during [month] (yyyy-MM): bought that month, or bought
   /// earlier and still not marked out (carried over). Same shape as getProducts.
   Future<List<Product>> getProductsByMonth(String month) async {
-    final res = await _withAuthRetry(() => _client.get(
-        _catalog('/products/by-month?month=$month'),
-        headers: _headers()));
+    final res = await _withAuthRetry(() => _client
+        .get(_catalog('/products/by-month?month=$month'), headers: _headers()));
     _ensureOk(res);
     final list = jsonDecode(res.body) as List;
     return list
@@ -157,8 +156,7 @@ class ApiService {
     return Product.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  Future<Product> updateProductStatus(
-      String productId, String status) async {
+  Future<Product> updateProductStatus(String productId, String status) async {
     final res = await _withAuthRetry(() => _client.patch(
           _catalog('/products/$productId/status'),
           headers: _headers(json: true),
@@ -174,10 +172,17 @@ class ApiService {
     _ensureOk(res);
   }
 
+  Future<void> removeProductFromMonth(String productId, String month) async {
+    final res = await _withAuthRetry(() => _client.delete(
+          _catalog('/products/$productId/month?month=$month'),
+          headers: _headers(),
+        ));
+    _ensureOk(res);
+  }
+
   Future<List<Purchase>> getProductHistory(String productId) async {
-    final res = await _withAuthRetry(() => _client.get(
-        _catalog('/products/$productId/history'),
-        headers: _headers()));
+    final res = await _withAuthRetry(() => _client
+        .get(_catalog('/products/$productId/history'), headers: _headers()));
     _ensureOk(res);
     final list = jsonDecode(res.body) as List;
     return list
@@ -197,9 +202,8 @@ class ApiService {
   }
 
   Future<List<Purchase>> getPurchasesByMonth(String month) async {
-    final res = await _withAuthRetry(() => _client.get(
-        _catalog('/purchases?month=$month'),
-        headers: _headers()));
+    final res = await _withAuthRetry(() =>
+        _client.get(_catalog('/purchases?month=$month'), headers: _headers()));
     _ensureOk(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final items = (body['items'] as List?) ?? [];
@@ -209,9 +213,8 @@ class ApiService {
   }
 
   Future<MonthlySummary> getMonthlySummary(String month) async {
-    final res = await _withAuthRetry(() => _client.get(
-        _analytics('/summary-month?month=$month'),
-        headers: _headers()));
+    final res = await _withAuthRetry(() => _client
+        .get(_analytics('/summary-month?month=$month'), headers: _headers()));
     _ensureOk(res);
     return MonthlySummary.fromJson(
         jsonDecode(res.body) as Map<String, dynamic>);
@@ -220,9 +223,13 @@ class ApiService {
   /// Purchase-based spend series for the last [months] months (oldest→newest).
   /// Same data source as the monthly summary, so the bar chart and the
   /// per-month totals always agree.
-  Future<List<MonthSpend>> getSpendByMonth({int months = 6}) async {
+  Future<List<MonthSpend>> getSpendByMonth({
+    int months = 6,
+    String? month,
+  }) async {
+    final monthQuery = month == null ? '' : '&month=$month';
     final res = await _withAuthRetry(() => _client.get(
-        _analytics('/spend-by-month?months=$months'),
+        _analytics('/spend-by-month?months=$months$monthQuery'),
         headers: _headers()));
     _ensureOk(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -245,8 +252,8 @@ class ApiService {
   }
 
   Future<List<ExpiringItem>> getExpiringSoon({int days = 7}) async {
-    final res = await _withAuthRetry(() =>
-        _client.get(_analytics('/expiring-soon?days=$days'), headers: _headers()));
+    final res = await _withAuthRetry(() => _client
+        .get(_analytics('/expiring-soon?days=$days'), headers: _headers()));
     _ensureOk(res);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final items = (body['items'] as List?) ?? [];

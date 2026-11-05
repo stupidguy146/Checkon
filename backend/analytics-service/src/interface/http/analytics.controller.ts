@@ -1,4 +1,10 @@
-import { Controller, Get, Headers, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Headers,
+  Query,
+} from '@nestjs/common';
 import { AnalyticsUseCases } from '../../application/use-case/analytics.use-cases';
 import { DomainError, AnalyticsErrorCode } from '../../shared/errors';
 import { SSO_ID_HEADER } from '../../shared/constants';
@@ -40,11 +46,16 @@ export class AnalyticsController {
   spendByMonth(
     @Headers(SSO_ID_HEADER) ssoId: string,
     @Query('months') months?: string,
+    @Query('month') month?: string,
   ) {
     const n = months ? parseInt(months, 10) : 6;
+    if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      throw new BadRequestException('month must be in YYYY-MM format');
+    }
     return this.analytics.spendByMonth(
       requireSsoId(ssoId),
       Number.isNaN(n) ? 6 : n,
+      month,
     );
   }
 

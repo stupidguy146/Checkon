@@ -40,12 +40,16 @@ export class AnalyticsProxyController {
   }
 
   @Get('spend-by-month')
-  spendByMonth(@Req() req: Request, @Query('months') months?: string) {
+  spendByMonth(
+    @Req() req: Request,
+    @Query('months') months?: string,
+    @Query('month') month?: string,
+  ) {
     return this.proxy.forwardToAnalytics(
       'GET',
       '/analytics/spend-by-month',
       undefined,
-      { months },
+      { months, month },
       this.sso(req),
     );
   }

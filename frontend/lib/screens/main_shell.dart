@@ -8,7 +8,6 @@ import '../theme/app_tokens.dart';
 import '../i18n/locale_scope.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/auth_scope.dart';
-import '../widgets/notification_bell.dart';
 import 'change_password_screen.dart';
 import 'change_pin_screen.dart';
 import 'edit_profile_screen.dart';
@@ -691,11 +690,19 @@ class _MenuScreenState extends State<_MenuScreen> {
         padding: EdgeInsets.zero,
         children: [
           GradientHeader(
-            subtitle: s.appTitle,
             title: s.navMenu,
-            logoAsset: 'assets/images/logos/checkon_logo.png',
-            logoHeight: 52,
-            trailing: const NotificationBell(),
+            titleIcon: Icons.menu_rounded,
+            centerTitle: false,
+            logoBackground: false,
+            logoAsset:
+                'assets/images/logos/953b0995-0966-4844-9cac-afe275ac9282.png',
+            logoHeight: 64,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.lg,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),

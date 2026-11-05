@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -151,6 +152,23 @@ export class ProductController {
     @Param('productId') productId: string,
   ) {
     await this.products.deleteProduct(productId, requireSsoId(ssoId));
+  }
+
+  @Delete('products/:productId/month')
+  @HttpCode(204)
+  async removeFromMonth(
+    @Headers(SSO_ID_HEADER) ssoId: string,
+    @Param('productId') productId: string,
+    @Query('month') month?: string,
+  ) {
+    if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+      throw new BadRequestException('month must be in YYYY-MM format');
+    }
+    await this.products.excludeProductFromMonth(
+      productId,
+      requireSsoId(ssoId),
+      month,
+    );
   }
 
   @Post('products/:productId/purchases')

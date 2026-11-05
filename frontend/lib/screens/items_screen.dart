@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/household_item.dart' show ItemCategory, categoryToString;
 import '../models/product.dart';
 import '../services/api_service.dart';
@@ -16,7 +17,7 @@ import 'record_purchase_screen.dart';
 import 'product_detail_screen.dart';
 
 /// Two-step add flow for the Items tab:
-///   1) choose: create a new product master  /  record a purchase for existing
+///   1) choose: create a new product master / record a purchase for existing
 ///   2a) if new: choose scan barcode / manual entry → AddProductScreen
 ///   2b) if existing: RecordPurchaseScreen (pick product → purchase form)
 /// Returns true if anything was created/recorded (so the caller can refresh).
@@ -246,10 +247,12 @@ class _ItemsScreenState extends State<ItemsScreen> {
     final s = context.strings;
     final messenger = ScaffoldMessenger.of(context);
     final dataRefresh = DataScope.of(context);
+    final monthLabel =
+        DateFormat('MMMM yyyy', context.locale.lang).format(_month);
     final confirmed = await showConfirmDialog(
       context,
-      title: s.deleteProductConfirmTitle,
-      message: s.deleteProductConfirmMessage(p.name),
+      title: s.removeProductFromMonthTitle,
+      message: s.removeProductFromMonthMessage(p.name, monthLabel),
       confirmLabel: s.delete,
       cancelLabel: s.cancel,
       icon: Icons.delete_outline_rounded,
@@ -257,13 +260,17 @@ class _ItemsScreenState extends State<ItemsScreen> {
     );
     if (!confirmed) return false;
     try {
-      await _api!.deleteProduct(p.productId);
+      await _api!.removeProductFromMonth(p.productId, _monthKey);
       dataRefresh.bump();
       if (mounted) {
-        AppSnackBar.show(messenger, s.productDeleted, SnackKind.success);
+        AppSnackBar.show(
+          messenger,
+          s.productRemovedFromMonth,
+          SnackKind.success,
+        );
         _reload();
       }
-      return true;
+      return false;
     } catch (e) {
       if (mounted) {
         AppSnackBar.show(messenger, s.errorWith(e), SnackKind.error);
@@ -284,6 +291,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
           children: [
             GradientHeader(
               title: s.itemsTitle,
+              titleIcon: Icons.inventory_2_rounded,
               subtitle: s.appTitle,
             ),
             // month navigator
@@ -409,7 +417,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => ProductDetailScreen(
-                                      productId: p.productId),
+                                    productId: p.productId,
+                                    removeFromMonth: _monthKey,
+                                  ),
                                 ),
                               );
                               if (changed == true) _reload();
@@ -534,7 +544,6 @@ class _ProductCard extends StatelessWidget {
     final img = _decode(product.imageBase64);
     final subtitle = [
       if (product.sizeLabel.isNotEmpty) product.sizeLabel,
-      if ((product.unitLabel ?? '').isNotEmpty) product.unitLabel!,
     ].join(' · ');
     return AppCard(
       onTap: onTap,

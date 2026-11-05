@@ -9,17 +9,62 @@ void main() {
   test('light and dark themes use intentional logo-inspired surfaces', () {
     expect(AppTheme.light.scaffoldBackgroundColor, AppSurfaces.lightBackground);
     expect(AppTheme.light.colorScheme.primary, AppColors.brand600);
+    expect(AppTheme.light.colorScheme.secondary, AppColors.cyan);
     expect(AppTheme.light.textTheme.bodyLarge?.fontFamily, 'Anuphan');
     expect(AppTheme.dark.scaffoldBackgroundColor, AppSurfaces.darkBackground);
     expect(AppTheme.dark.colorScheme.surface, AppSurfaces.darkElevated);
     expect(AppTheme.dark.colorScheme.primary, AppColors.brand300);
+    expect(AppTheme.dark.colorScheme.secondary, AppColors.aqua);
   });
 
-  test('primary action foreground meets WCAG AA contrast', () {
+  test(
+      'action buttons use tennis green in light mode and dark green in dark mode',
+      () {
+    final lightButtons = AppTheme.light;
+    final darkButtons = AppTheme.dark;
     expect(
-      _contrastRatio(AppTheme.light.colorScheme.onPrimary,
-          AppTheme.light.colorScheme.primary),
-      greaterThanOrEqualTo(4.5),
+      AppColors.actionButtonBackground(dark: false),
+      AppColors.tennisGreen,
+    );
+    expect(
+      AppColors.actionButtonBackground(dark: true),
+      AppColors.success,
+    );
+    expect(
+      lightButtons.filledButtonTheme.style!.backgroundColor!.resolve({}),
+      AppColors.tennisGreen,
+    );
+    expect(
+      darkButtons.filledButtonTheme.style!.backgroundColor!.resolve({}),
+      AppColors.success,
+    );
+    expect(
+      lightButtons.filledButtonTheme.style!.foregroundColor!.resolve({}),
+      lightButtons.colorScheme.onPrimary,
+    );
+    expect(
+      darkButtons.filledButtonTheme.style!.foregroundColor!.resolve({}),
+      darkButtons.colorScheme.onPrimary,
+    );
+    expect(
+      lightButtons.elevatedButtonTheme.style!.backgroundColor!.resolve({}),
+      AppColors.tennisGreen,
+    );
+    expect(
+      darkButtons.elevatedButtonTheme.style!.backgroundColor!.resolve({}),
+      AppColors.success,
+    );
+    expect(lightButtons.floatingActionButtonTheme.backgroundColor,
+        AppColors.tennisGreen);
+    expect(darkButtons.floatingActionButtonTheme.backgroundColor,
+        AppColors.success);
+    expect(
+      AppTheme.light.outlinedButtonTheme.style!.foregroundColor!.resolve({}),
+      AppTheme.light.colorScheme.primary,
+    );
+    expect(
+      AppTheme.light.textButtonTheme.style!.foregroundColor!.resolve({}),
+      AppTheme.light.colorScheme.primary,
     );
   });
 

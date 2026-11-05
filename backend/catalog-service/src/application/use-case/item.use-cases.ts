@@ -34,7 +34,6 @@ export class ItemUseCases {
       size: cmd.size ?? null,
       unit: cmd.unit ?? null,
       quantity: cmd.quantity,
-      unitLabel: cmd.unitLabel ?? null,
       price: cmd.price,
       store: cmd.store ?? null,
       purchaseDate,
@@ -92,7 +91,6 @@ export class ItemUseCases {
     if (cmd.size !== undefined) item.size = cmd.size;
     if (cmd.unit !== undefined) item.unit = cmd.unit;
     if (cmd.quantity !== undefined) item.quantity = cmd.quantity;
-    if (cmd.unitLabel !== undefined) item.unitLabel = cmd.unitLabel;
     if (cmd.price !== undefined) item.price = cmd.price;
     if (cmd.store !== undefined) item.store = cmd.store;
     if (cmd.purchaseDate !== undefined) item.purchaseDate = cmd.purchaseDate;

@@ -11,7 +11,6 @@ export class ProductPresenter {
       category: p.category,
       size: p.size,
       unit: p.unit,
-      unitLabel: p.unitLabel,
       imageBase64: p.imageBase64,
       isRecurring: p.isRecurring,
       recurringDaysManual: p.recurringDaysManual,

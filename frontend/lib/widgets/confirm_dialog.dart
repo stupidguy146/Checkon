@@ -16,6 +16,10 @@ Future<bool> showConfirmDialog(
   bool danger = false,
 }) async {
   final accent = danger ? AppColors.danger : AppColors.brand500;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final buttonColor = danger
+      ? AppColors.danger
+      : AppColors.actionButtonBackground(dark: isDark);
   final tint = danger ? AppColors.coralTint : AppColors.brand100;
 
   final result = await showDialog<bool>(
@@ -73,7 +77,7 @@ Future<bool> showConfirmDialog(
                   Expanded(
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: accent,
+                        backgroundColor: buttonColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm),

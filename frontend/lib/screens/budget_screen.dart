@@ -39,6 +39,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Future<_MonthData>? _future;
   double _budget = 3000;
   late DateTime _month; // first day of selected month
+  late DateTime _chartEndMonth;
   int _rev = 0;
 
   @override
@@ -46,6 +47,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     super.initState();
     final now = DateTime.now();
     _month = DateTime(now.year, now.month);
+    _chartEndMonth = _month;
   }
 
   @override
@@ -64,21 +66,36 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
   }
 
-  String get _monthKey =>
-      '${_month.year.toString().padLeft(4, '0')}-${_month.month.toString().padLeft(2, '0')}';
-
   Future<_MonthData> _load() async {
-    final key = _monthKey;
+    final selectedMonth = _month;
+    final chartEndMonth = _chartEndMonth;
+    final key =
+        '${selectedMonth.year.toString().padLeft(4, '0')}-${selectedMonth.month.toString().padLeft(2, '0')}';
     final results = await Future.wait([
       _api!.getMonthlySummary(key),
       _api!.getPurchasesByMonth(key),
       _api!.getProducts(),
-      _api!.getSpendByMonth(months: 6),
     ]);
     final summary = results[0] as MonthlySummary;
     final purchases = results[1] as List<Purchase>;
     final products = results[2] as List<Product>;
-    final spendSeries = results[3] as List<MonthSpend>;
+    final spendSummaries = await Future.wait(
+      List.generate(6, (index) {
+        final month = DateTime(
+          chartEndMonth.year,
+          chartEndMonth.month - 5 + index,
+        );
+        final monthKey =
+            '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}';
+        return monthKey == key
+            ? Future.value(summary)
+            : _api!.getMonthlySummary(monthKey);
+      }),
+    );
+    final spendSeries = spendSummaries
+        .map(
+            (month) => MonthSpend(month: month.month, amount: month.grandTotal))
+        .toList();
     final byId = {for (final p in products) p.productId: p};
     return _MonthData(summary, purchases, byId, spendSeries);
   }
@@ -101,6 +118,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
     if (target.year == _month.year && target.month == _month.month) return;
     setState(() {
       _month = target;
+      final chartStartMonth =
+          DateTime(_chartEndMonth.year, _chartEndMonth.month - 5);
+      if (target.isBefore(chartStartMonth) || target.isAfter(_chartEndMonth)) {
+        _chartEndMonth = target;
+      }
       _future = _load();
     });
   }
@@ -148,6 +170,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           children: [
             GradientHeader(
               title: s.budgetTitle,
+              titleIcon: Icons.account_balance_wallet_rounded,
               subtitle: s.appTitle,
             ),
             Padding(

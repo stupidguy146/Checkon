@@ -8,6 +8,12 @@ export interface ProductRepositoryPort {
   findById(productId: string, ssoId: string): Promise<Product | null>;
   update(product: Product): Promise<Product>;
   delete(productId: string, ssoId: string): Promise<void>;
+  excludeFromMonth(
+    productId: string,
+    ssoId: string,
+    month: string,
+  ): Promise<void>;
+  findExcludedProductIds(ssoId: string, month: string): Promise<string[]>;
   count(ssoId: string): Promise<number>;
 }
 

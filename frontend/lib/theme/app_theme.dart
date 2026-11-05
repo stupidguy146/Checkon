@@ -18,7 +18,7 @@ class AppTheme {
       onSecondary: AppColors.brand900,
       secondaryContainer: AppColors.iceBlue,
       onSecondaryContainer: AppColors.brand900,
-      tertiary: AppColors.freshGreen,
+      tertiary: AppColors.cyan,
       onTertiary: AppColors.neutral0,
       surface: AppSurfaces.lightElevated,
       onSurface: AppColors.neutral900,
@@ -98,6 +98,7 @@ class AppTheme {
     required Color selectedSurface,
   }) {
     final isDark = scheme.brightness == Brightness.dark;
+    final actionButtonColor = AppColors.actionButtonBackground(dark: isDark);
     final onSurface = scheme.onSurface;
     final textTheme = TextTheme(
       displayLarge: AppType.display.copyWith(color: onSurface),
@@ -182,7 +183,25 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
+          backgroundColor: actionButtonColor,
+          foregroundColor: scheme.onPrimary,
+          disabledBackgroundColor:
+              isDark ? AppColors.darkSurfaceAlt : AppColors.neutral200,
+          disabledForegroundColor: mutedText,
+          minimumSize: const Size(64, 48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.button),
+          ),
+          textStyle: AppType.titleMedium,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: actionButtonColor,
           foregroundColor: scheme.onPrimary,
           disabledBackgroundColor:
               isDark ? AppColors.darkSurfaceAlt : AppColors.neutral200,
@@ -216,7 +235,7 @@ class AppTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: scheme.primary,
+        backgroundColor: actionButtonColor,
         foregroundColor: scheme.onPrimary,
         elevation: AppGlass.elevation,
         focusElevation: AppGlass.elevation,

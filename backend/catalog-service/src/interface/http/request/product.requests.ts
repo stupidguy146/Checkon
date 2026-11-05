@@ -31,7 +31,6 @@ export class CreateProductRequest {
   @IsIn(CATEGORIES as unknown as string[]) category: string;
   @IsOptional() @IsString() @MaxLength(40) size?: string;
   @IsOptional() @IsString() @MaxLength(40) unit?: string;
-  @IsOptional() @IsString() @MaxLength(40) unitLabel?: string;
   @IsOptional() @IsString() imageBase64?: string;
   @IsOptional() @IsBoolean() isRecurring?: boolean;
   @IsOptional() @IsInt() @Min(1) @Max(3650) recurringDaysManual?: number;
@@ -49,7 +48,6 @@ export class UpdateProductRequest {
   @IsOptional() @IsIn(CATEGORIES as unknown as string[]) category?: string;
   @IsOptional() @IsString() @MaxLength(40) size?: string;
   @IsOptional() @IsString() @MaxLength(40) unit?: string;
-  @IsOptional() @IsString() @MaxLength(40) unitLabel?: string;
   @IsOptional() @IsString() imageBase64?: string;
   @IsOptional() @IsBoolean() isRecurring?: boolean;
   @IsOptional() @IsInt() @Min(1) @Max(3650) recurringDaysManual?: number;

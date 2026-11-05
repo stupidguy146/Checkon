@@ -29,7 +29,6 @@ class HouseholdItem {
   final String? size;
   final String? unit;
   final int quantity;
-  final String? unitLabel;
   final double price;
   final double subtotal;
   final String? store;
@@ -49,7 +48,6 @@ class HouseholdItem {
     this.size,
     this.unit,
     required this.quantity,
-    this.unitLabel,
     required this.price,
     this.subtotal = 0,
     this.store,
@@ -71,7 +69,6 @@ class HouseholdItem {
       size: json['size'] as String?,
       unit: json['unit'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-      unitLabel: json['unitLabel'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
       store: json['store'] as String?,

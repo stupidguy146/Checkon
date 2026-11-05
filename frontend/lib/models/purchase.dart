@@ -8,6 +8,7 @@ class Purchase {
   final String? buyer;
   final String? store;
   final String purchasedAt; // yyyy-mm-dd
+  final DateTime createdAt;
 
   Purchase({
     required this.purchaseId,
@@ -18,6 +19,7 @@ class Purchase {
     this.buyer,
     this.store,
     required this.purchasedAt,
+    required this.createdAt,
   });
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,9 @@ class Purchase {
       buyer: json['buyer'] as String?,
       store: json['store'] as String?,
       purchasedAt: (json['purchasedAt'] as String).substring(0, 10),
+      createdAt: json['createdAt'] == null
+          ? DateTime.parse((json['purchasedAt'] as String).substring(0, 10))
+          : DateTime.parse(json['createdAt'] as String),
     );
   }
 }

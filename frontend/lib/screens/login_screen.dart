@@ -65,96 +65,98 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            GradientHeader(
+            AuthHeroHeader(
               title: s.welcomeBack,
               subtitle: s.loginSubtitle,
-              logoAsset: 'assets/images/logos/checkon_logo.png',
-              logoHeight: 64,
-              centerTitle: true,
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (errorText != null) AuthErrorBanner(message: errorText),
-                    TextFormField(
-                      controller: _emailCtrl,
-                      decoration: InputDecoration(
-                        labelText: s.emailOrUsername,
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
-                      ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? s.enterIdentifier
-                          : null,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: _passwordCtrl,
-                      obscureText: _obscure,
-                      decoration: InputDecoration(
-                        labelText: s.password,
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscure
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined),
-                          onPressed: () => setState(() => _obscure = !_obscure),
+                child: AuthFormSurface(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (errorText != null)
+                        AuthErrorBanner(message: errorText),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        decoration: InputDecoration(
+                          labelText: s.emailOrUsername,
+                          prefixIcon: const Icon(Icons.person_outline_rounded),
                         ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? s.enterIdentifier
+                            : null,
                       ),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? s.enterPassword : null,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _loading
-                            ? null
-                            : () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const ForgotPasswordScreen()),
-                                ),
-                        child: Text(s.forgotPassword),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _passwordCtrl,
+                        obscureText: _obscure,
+                        decoration: InputDecoration(
+                          labelText: s.password,
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? s.enterPassword : null,
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    FilledButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2.5, color: Colors.white),
-                            )
-                          : Text(s.signIn),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(s.noAccount,
-                            style: Theme.of(context).textTheme.bodyMedium),
-                        TextButton(
+                      const SizedBox(height: AppSpacing.sm),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
                           onPressed: _loading
                               ? null
                               : () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) => const RegisterScreen()),
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen()),
                                   ),
-                          child: Text(s.signUp),
+                          child: Text(s.forgotPassword),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const Center(child: LanguageToggle(onGradient: false)),
-                  ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      FilledButton(
+                        onPressed: _loading ? null : _submit,
+                        child: _loading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Text(s.signIn),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(s.noAccount,
+                              style: Theme.of(context).textTheme.bodyMedium),
+                          TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const RegisterScreen()),
+                                    ),
+                            child: Text(s.signUp),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Center(child: LanguageToggle(onGradient: false)),
+                    ],
+                  ),
                 ),
               ),
             ),

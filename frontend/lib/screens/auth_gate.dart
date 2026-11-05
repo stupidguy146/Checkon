@@ -53,7 +53,14 @@ class _AuthGateState extends State<AuthGate> {
     if (isAuth != _wasAuthenticated) {
       _wasAuthenticated = isAuth;
       if (isAuth) {
-        setState(() => _unlocked = !_pinRequired);
+        setState(() {
+          if (_auth?.requiresPinSetup ?? false) {
+            _pinRequired = false;
+            _unlocked = false;
+          } else {
+            _unlocked = !_pinRequired;
+          }
+        });
       } else {
         // Keep the device PIN configuration when the account session ends.
         setState(() {
@@ -73,13 +80,15 @@ class _AuthGateState extends State<AuthGate> {
     final hasPin = await AppLockScope.read(context).hasPin();
     if (!mounted) return;
     setState(() {
-      _pinRequired = hasPin;
-      _unlocked = !hasPin;
+      final requiresSetup = _auth?.requiresPinSetup ?? false;
+      _pinRequired = hasPin && !requiresSetup;
+      _unlocked = !requiresSetup && !hasPin;
       _lockReady = true;
     });
   }
 
   void _onPinSetupComplete() {
+    _auth?.completePinSetup();
     setState(() {
       _pinRequired = true;
       _unlocked = true;

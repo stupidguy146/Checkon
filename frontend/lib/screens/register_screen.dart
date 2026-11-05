@@ -89,130 +89,133 @@ class _RegisterScreenState extends State<RegisterScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            GradientHeader(
+            AuthHeroHeader(
               title: s.createAccount,
               subtitle: s.registerSubtitle,
-              logoAsset: 'assets/images/logos/checkon_logo.png',
-              logoHeight: 64,
-              centerTitle: true,
+              journeyStep: 1,
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (errorText != null) AuthErrorBanner(message: errorText),
-                    DropdownButtonFormField<String>(
-                      initialValue: _title,
-                      decoration: InputDecoration(
-                        labelText: s.title,
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
-                      ),
-                      items: [
-                        for (final t in _titles)
-                          DropdownMenuItem(
-                            value: t,
-                            child: Text(s.titleLabel(t)),
-                          ),
-                      ],
-                      onChanged: _loading
-                          ? null
-                          : (v) => setState(() => _title = v ?? 'unspecified'),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _firstNameCtrl,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              labelText: s.firstName,
-                              prefixIcon: const Icon(Icons.badge_outlined),
+                child: AuthFormSurface(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (errorText != null)
+                        AuthErrorBanner(message: errorText),
+                      AdaptiveDropdownFormField<String>(
+                        initialValue: _title,
+                        decoration: InputDecoration(
+                          labelText: s.title,
+                          prefixIcon: const Icon(Icons.person_outline_rounded),
+                        ),
+                        items: [
+                          for (final t in _titles)
+                            DropdownMenuItem(
+                              value: t,
+                              child: Text(s.titleLabel(t)),
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? s.enterFirstName
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _lastNameCtrl,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(labelText: s.lastName),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? s.enterLastName
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: _usernameCtrl,
-                      textInputAction: TextInputAction.next,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'[a-zA-Z0-9._-]')),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: s.username,
-                        prefixIcon: const Icon(Icons.alternate_email_rounded),
+                        ],
+                        onChanged: _loading
+                            ? null
+                            : (v) =>
+                                setState(() => _title = v ?? 'unspecified'),
                       ),
-                      validator: (v) {
-                        final value = v?.trim() ?? '';
-                        final re = RegExp(r'^[a-zA-Z0-9._-]{3,30}$');
-                        return re.hasMatch(value) ? null : s.usernameRule;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        labelText: s.email,
-                        prefixIcon: const Icon(Icons.mail_outline_rounded),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _firstNameCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: s.firstName,
+                                prefixIcon: const Icon(Icons.badge_outlined),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? s.enterFirstName
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _lastNameCtrl,
+                              textInputAction: TextInputAction.next,
+                              decoration:
+                                  InputDecoration(labelText: s.lastName),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? s.enterLastName
+                                  : null,
+                            ),
+                          ),
+                        ],
                       ),
-                      validator: (v) {
-                        final value = v?.trim() ?? '';
-                        final re = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                        return re.hasMatch(value) ? null : s.invalidEmail;
-                      },
-                      onFieldSubmitted: (_) => _loading ? null : _submit(),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    FilledButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2.5, color: Colors.white),
-                            )
-                          : Text(s.continueLabel),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(s.haveAccount,
-                            style: Theme.of(context).textTheme.bodyMedium),
-                        TextButton(
-                          onPressed:
-                              _loading ? null : () => Navigator.pop(context),
-                          child: Text(s.signIn),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _usernameCtrl,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'[a-zA-Z0-9._-]')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: s.username,
+                          prefixIcon: const Icon(Icons.alternate_email_rounded),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const Center(child: LanguageToggle(onGradient: false)),
-                  ],
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          final re = RegExp(r'^[a-zA-Z0-9._-]{3,30}$');
+                          return re.hasMatch(value) ? null : s.usernameRule;
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          labelText: s.email,
+                          prefixIcon: const Icon(Icons.mail_outline_rounded),
+                        ),
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          final re = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                          return re.hasMatch(value) ? null : s.invalidEmail;
+                        },
+                        onFieldSubmitted: (_) => _loading ? null : _submit(),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      FilledButton(
+                        onPressed: _loading ? null : _submit,
+                        child: _loading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
+                              )
+                            : Text(s.continueLabel),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(s.haveAccount,
+                              style: Theme.of(context).textTheme.bodyMedium),
+                          TextButton(
+                            onPressed:
+                                _loading ? null : () => Navigator.pop(context),
+                            child: Text(s.signIn),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Center(child: LanguageToggle(onGradient: false)),
+                    ],
+                  ),
                 ),
               ),
             ),

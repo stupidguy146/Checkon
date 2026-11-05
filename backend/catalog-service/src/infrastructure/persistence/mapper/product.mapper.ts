@@ -12,7 +12,6 @@ export class ProductMapper {
     r.category = d.category;
     r.size = d.size;
     r.unit = d.unit;
-    r.unitLabel = d.unitLabel;
     r.imageBase64 = d.imageBase64;
     r.isRecurring = d.isRecurring;
     r.recurringDaysManual = d.recurringDaysManual;
@@ -31,7 +30,6 @@ export class ProductMapper {
       category: r.category as Category,
       size: r.size,
       unit: r.unit,
-      unitLabel: r.unitLabel,
       imageBase64: r.imageBase64,
       isRecurring: r.isRecurring,
       recurringDaysManual: r.recurringDaysManual ?? null,

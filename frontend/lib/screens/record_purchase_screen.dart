@@ -94,7 +94,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
   }
 
   Future<void> _pickPurchaseDate() async {
-    final picked = await showDatePicker(
+    final picked = await showAdaptiveDatePicker(
       context: context,
       initialDate: _purchaseDate,
       firstDate: DateTime(2020),
@@ -331,7 +331,6 @@ class _ProductPickTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitle = [
       if (product.sizeLabel.isNotEmpty) product.sizeLabel,
-      if ((product.unitLabel ?? '').isNotEmpty) product.unitLabel!,
     ].join(' · ');
     return AppCard(
       onTap: onTap,

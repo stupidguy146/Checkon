@@ -13,7 +13,6 @@ export class HouseholdItemMapper {
     r.size = d.size;
     r.unit = d.unit;
     r.quantity = d.quantity;
-    r.unitLabel = d.unitLabel;
     r.price = d.price.toFixed(2);
     r.store = d.store;
     r.purchaseDate = d.purchaseDate;
@@ -36,7 +35,6 @@ export class HouseholdItemMapper {
       size: r.size,
       unit: r.unit,
       quantity: r.quantity,
-      unitLabel: r.unitLabel,
       price: parseFloat(r.price ?? '0'),
       store: r.store,
       purchaseDate: r.purchaseDate,

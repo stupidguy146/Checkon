@@ -10,28 +10,29 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Sampled from the active Checkon logo: clear sky blues, aquatic cyan,
-  // fresh greens, and cloud whites. brand600 is suitable for white text.
-  static const Color brand50 = Color(0xFFF2FAFF);
-  static const Color brand100 = Color(0xFFDDF3FF);
-  static const Color brand200 = Color(0xFFB9E7FF);
-  static const Color brand300 = Color(0xFF8BD8F8);
-  static const Color brand400 = Color(0xFF4EC3ED);
-  static const Color brand500 = Color(0xFF168FDB);
-  static const Color brand600 = Color(0xFF0878B5);
-  static const Color brand700 = Color(0xFF075E91);
-  static const Color brand800 = Color(0xFF084B73);
-  static const Color brand900 = Color(0xFF0B3856);
+  // Clear sky blue is the primary brand color; green remains the secondary.
+  static const Color brand50 = Color(0xFFF1F7FE);
+  static const Color brand100 = Color(0xFFDDEBFB);
+  static const Color brand200 = Color(0xFFBAD5F6);
+  static const Color brand300 = Color(0xFF90BDF3);
+  static const Color brand400 = Color(0xFF63A2EF);
+  static const Color brand500 = Color(0xFF3D88E0);
+  static const Color brand600 = Color(0xFF246FC4);
+  static const Color brand700 = Color(0xFF205C9F);
+  static const Color brand800 = Color(0xFF1B4B7D);
+  static const Color brand900 = Color(0xFF173A60);
 
-  static const Color skyBlue = Color(0xFF62C3F5);
-  static const Color oceanBlue = Color(0xFF0878B5);
+  static const Color skyBlue = Color(0xFF62A5F5);
+  static const Color oceanBlue = Color(0xFF246FC4);
   static const Color aqua = Color(0xFF35C4D8);
   static const Color cyan = Color(0xFF12AFC7);
   static const Color freshGreen = Color(0xFF35A96D);
+  static const Color tennisGreen = Color(0xFFC6E82F);
+  static const Color tennisGreenSurface = Color(0xFFEAF6B2);
   static const Color mint = Color(0xFFBDEFD8);
   static const Color softWhite = Color(0xFFFCFEFF);
-  static const Color cloudWhite = Color(0xFFF2FAFF);
-  static const Color iceBlue = Color(0xFFE5F5FF);
+  static const Color cloudWhite = Color(0xFFF1F7FE);
+  static const Color iceBlue = Color(0xFFE8F2FE);
 
   // Amber remains a distinct financial/highlight accent.
   static const Color accent400 = Color(0xFFFFE6A8);
@@ -43,10 +44,15 @@ class AppColors {
   static const Color sage = Color(0xFFDDF4E6);
   static const Color warning = Color(0xFF8A5D00);
   static const Color amberTint = Color(0xFFFFF0C2);
+  static const Color statusLow = Color(0xFFFFC857);
+  static const Color statusLowForeground = Color(0xFF5C3A00);
   static const Color shouldBuy = Color(0xFFAC5614);
   static const Color danger = Color(0xFFB42318);
   static const Color coralTint = Color(0xFFFCE4E0);
   static const Color info = brand600;
+
+  static Color actionButtonBackground({required bool dark}) =>
+      dark ? success : tennisGreen;
 
   // Cool neutral scale keeps long-form text calm and highly legible.
   static const Color neutral0 = Color(0xFFFFFFFF);
@@ -72,8 +78,8 @@ class AppColors {
 class AppSurfaces {
   AppSurfaces._();
 
-  static const Color lightBackground = Color(0xFFF1FAFF);
-  static const Color lightSecondary = Color(0xFFEAF7FE);
+  static const Color lightBackground = Color(0xFFF4F8FF);
+  static const Color lightSecondary = Color(0xFFEDF4FE);
   static const Color lightElevated = Color(0xFFFFFFFF);
   static const Color lightGlass = Color(0xE0FFFFFF);
   static const Color darkBackground = Color(0xFF061827);

@@ -11,7 +11,6 @@ export class CatalogPresenter {
       size: i.size,
       unit: i.unit,
       quantity: i.quantity,
-      unitLabel: i.unitLabel,
       price: i.price,
       subtotal: i.subtotal(),
       store: i.store,

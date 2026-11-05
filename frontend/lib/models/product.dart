@@ -32,7 +32,6 @@ class Product {
   final ItemCategory category;
   final String? size;
   final String? unit;
-  final String? unitLabel;
   final String? imageBase64;
   final bool isRecurring;
   final int? recurringDaysManual;
@@ -46,7 +45,6 @@ class Product {
     required this.category,
     this.size,
     this.unit,
-    this.unitLabel,
     this.imageBase64,
     this.isRecurring = false,
     this.recurringDaysManual,
@@ -62,7 +60,6 @@ class Product {
       category: categoryFromString(json['category'] as String?),
       size: json['size'] as String?,
       unit: json['unit'] as String?,
-      unitLabel: json['unitLabel'] as String?,
       imageBase64: json['imageBase64'] as String?,
       isRecurring: (json['isRecurring'] ?? false) as bool,
       recurringDaysManual: (json['recurringDaysManual'] as num?)?.toInt(),

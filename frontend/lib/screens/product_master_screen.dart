@@ -10,12 +10,11 @@ import '../widgets/confirm_dialog.dart';
 import '../widgets/auth_scope.dart';
 import '../state/data_refresh.dart';
 import '../i18n/locale_scope.dart';
-import '../i18n/app_strings.dart';
-import 'add_product_screen.dart';
 import 'product_detail_screen.dart';
+import 'items_screen.dart' show showAddProductFlow;
 
 /// Master catalogue of products (the durable "what we own" list).
-/// Search + category filter + recurring badge + user-driven stock status.
+/// Search + category filter + recurring badge.
 class ProductMasterScreen extends StatefulWidget {
   const ProductMasterScreen({super.key});
 
@@ -58,11 +57,8 @@ class _ProductMasterScreenState extends State<ProductMasterScreen> {
   }
 
   Future<void> _openAdd() async {
-    final created = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const AddProductScreen()),
-    );
-    if (created == true) _reload();
+    final created = await showAddProductFlow(context);
+    if (created) _reload();
   }
 
   Future<bool> _confirmDelete(Product p) async {
@@ -125,151 +121,139 @@ class _ProductMasterScreenState extends State<ProductMasterScreen> {
                     onChanged: (v) => setState(() => _search = v.trim()),
                   ),
                 ),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                children: [
-                  _CatChip(
-                    label: s.categoryAll,
-                    selected: _category == null,
-                    onTap: () => setState(() => _category = null),
-                  ),
-                  for (final c in ItemCategory.values)
-                    _CatChip(
-                      label: s.categoryName(categoryToString(c)),
-                      selected: _category == c,
-                      onTap: () => setState(() => _category = c),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async => _reload(),
-                child: FutureBuilder<List<Product>>(
-                  future: _future,
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return const SkeletonList();
-                    }
-                    if (snap.hasError) {
-                      return ErrorView(error: snap.error!, onRetry: _reload);
-                    }
-                    var products = snap.data ?? [];
-                    final hasAny = products.isNotEmpty;
-                    if (_category != null) {
-                      products = products
-                          .where((p) => p.category == _category)
-                          .toList();
-                    }
-                    if (_search.isNotEmpty) {
-                      final q = _search.toLowerCase();
-                      products = products
-                          .where((p) => p.name.toLowerCase().contains(q))
-                          .toList();
-                    }
-                    if (products.isEmpty) {
-                      if (hasAny) {
-                        return EmptyState(
-                          icon: Icons.search_off_rounded,
-                          title: s.noMatchingProducts,
-                          message: s.noMatchingItemsHint,
-                          action: FilledButton(
-                            onPressed: () => setState(() {
-                              _search = '';
-                              _searchCtrl.clear();
-                              _category = null;
-                            }),
-                            child: Text(s.clearFilters),
-                          ),
-                        );
-                      }
-                      return EmptyState(
-                        icon: Icons.inventory_2_outlined,
-                        title: s.noProductsYet,
-                        message: s.noProductsYetHint,
-                        action: FilledButton.icon(
-                          onPressed: _openAdd,
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: Text(s.addProductTitle),
+                SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    children: [
+                      _CatChip(
+                        label: s.categoryAll,
+                        selected: _category == null,
+                        onTap: () => setState(() => _category = null),
+                      ),
+                      for (final c in ItemCategory.values)
+                        _CatChip(
+                          label: s.categoryName(categoryToString(c)),
+                          selected: _category == c,
+                          onTap: () => setState(() => _category = c),
                         ),
-                      );
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg, 0, AppSpacing.lg, 90),
-                      itemCount: products.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, i) {
-                        final p = products[i];
-                        return Dismissible(
-                          key: ValueKey(p.productId),
-                          direction: DismissDirection.endToStart,
-                          confirmDismiss: (_) async {
-                            await _confirmDelete(p);
-                            return false;
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async => _reload(),
+                    child: FutureBuilder<List<Product>>(
+                      future: _future,
+                      builder: (context, snap) {
+                        if (snap.connectionState == ConnectionState.waiting) {
+                          return const SkeletonList();
+                        }
+                        if (snap.hasError) {
+                          return ErrorView(
+                              error: snap.error!, onRetry: _reload);
+                        }
+                        var products = snap.data ?? [];
+                        final hasAny = products.isNotEmpty;
+                        if (_category != null) {
+                          products = products
+                              .where((p) => p.category == _category)
+                              .toList();
+                        }
+                        if (_search.isNotEmpty) {
+                          final q = _search.toLowerCase();
+                          products = products
+                              .where((p) => p.name.toLowerCase().contains(q))
+                              .toList();
+                        }
+                        if (products.isEmpty) {
+                          if (hasAny) {
+                            return EmptyState(
+                              icon: Icons.search_off_rounded,
+                              title: s.noMatchingProducts,
+                              message: s.noMatchingItemsHint,
+                              action: FilledButton(
+                                onPressed: () => setState(() {
+                                  _search = '';
+                                  _searchCtrl.clear();
+                                  _category = null;
+                                }),
+                                child: Text(s.clearFilters),
+                              ),
+                            );
+                          }
+                          return EmptyState(
+                            icon: Icons.inventory_2_outlined,
+                            title: s.noProductsYet,
+                            message: s.noProductsYetHint,
+                            action: FilledButton.icon(
+                              onPressed: () => _openAdd(),
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: Text(s.addProductTitle),
+                            ),
+                          );
+                        }
+                        return ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.lg, 0, AppSpacing.lg, 90),
+                          itemCount: products.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.md),
+                          itemBuilder: (context, i) {
+                            final p = products[i];
+                            return Dismissible(
+                              key: ValueKey(p.productId),
+                              direction: DismissDirection.endToStart,
+                              confirmDismiss: (_) async {
+                                await _confirmDelete(p);
+                                return false;
+                              },
+                              background:
+                                  _SwipeDeleteBackground(label: s.delete),
+                              child: _ProductCard(
+                                product: p,
+                                onTap: () async {
+                                  final changed = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ProductDetailScreen(
+                                        productId: p.productId,
+                                        readOnly: true,
+                                      ),
+                                    ),
+                                  );
+                                  if (changed == true) _reload();
+                                },
+                              ),
+                            );
                           },
-                          background:
-                              _SwipeDeleteBackground(label: s.delete),
-                          child: _ProductCard(
-                            product: p,
-                            onTap: () async {
-                              final changed = await Navigator.push<bool>(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ProductDetailScreen(
-                                      productId: p.productId),
-                                ),
-                              );
-                              if (changed == true) _reload();
-                            },
-                          ),
                         );
                       },
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
-            ),
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab_products',
-        onPressed: _openAdd,
-        child: const Icon(Icons.add_rounded),
+      floatingActionButton: FutureBuilder<List<Product>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.data?.isNotEmpty != true) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton(
+            heroTag: 'fab_products',
+            onPressed: _openAdd,
+            child: const Icon(Icons.add_rounded),
+          );
+        },
       ),
     );
-  }
-}
-
-/// Map the user-driven product status to the shared StockStatus used by chips.
-StockStatus _stockStatusOf(ProductStatus s) {
-  switch (s) {
-    case ProductStatus.inStock:
-      return StockStatus.normal;
-    case ProductStatus.low:
-      return StockStatus.low;
-    case ProductStatus.out:
-      return StockStatus.out;
-  }
-}
-
-String _statusLabel(AppStrings s, ProductStatus st) {
-  switch (st) {
-    case ProductStatus.inStock:
-      return s.productStatusInStock;
-    case ProductStatus.low:
-      return s.productStatusLow;
-    case ProductStatus.out:
-      return s.productStatusOut;
   }
 }
 
@@ -284,7 +268,6 @@ class _ProductCard extends StatelessWidget {
     final img = _decode(product.imageBase64);
     final subtitle = [
       if (product.sizeLabel.isNotEmpty) product.sizeLabel,
-      if ((product.unitLabel ?? '').isNotEmpty) product.unitLabel!,
     ].join(' · ');
     return AppCard(
       onTap: onTap,
@@ -326,16 +309,10 @@ class _ProductCard extends StatelessWidget {
                 ),
                 if (subtitle.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ],
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          StatusChip(
-            status: _stockStatusOf(product.status),
-            label: _statusLabel(s, product.status),
           ),
         ],
       ),
@@ -360,8 +337,8 @@ class _RecurringBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm, vertical: 2),
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.brand100,
         borderRadius: BorderRadius.circular(AppRadius.pill),

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HouseholdItemRecord } from './infrastructure/persistence/orm/household-item.persistence';
 import { ProductRecord } from './infrastructure/persistence/orm/product.persistence';
 import { PurchaseRecord } from './infrastructure/persistence/orm/purchase.persistence';
+import { ProductMonthExclusionRecord } from './infrastructure/persistence/orm/product-month-exclusion.persistence';
 import { ItemRepositoryAdapter } from './infrastructure/persistence/item.repository.adapter';
 import { ProductRepositoryAdapter } from './infrastructure/persistence/product.repository.adapter';
 import { PurchaseRepositoryAdapter } from './infrastructure/persistence/purchase.repository.adapter';
@@ -21,6 +22,7 @@ import { ProductController } from './interface/http/product.controller';
       HouseholdItemRecord,
       ProductRecord,
       PurchaseRecord,
+      ProductMonthExclusionRecord,
     ]),
   ],
   controllers: [ItemController, ProductController],

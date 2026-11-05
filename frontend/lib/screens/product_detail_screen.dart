@@ -6,6 +6,7 @@ import '../models/household_item.dart' show categoryToString;
 import '../models/product.dart';
 import '../models/purchase.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/app_snackbar.dart';
@@ -13,7 +14,7 @@ import '../widgets/confirm_dialog.dart';
 import '../widgets/auth_scope.dart';
 import '../state/data_refresh.dart';
 import '../i18n/locale_scope.dart';
-import 'record_purchase_screen.dart';
+import 'add_product_screen.dart';
 
 /// Bundle fetched for the detail view.
 class _DetailData {
@@ -26,7 +27,14 @@ class _DetailData {
 /// delete. Pops `true` when anything changed so the caller can refresh.
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
-  const ProductDetailScreen({super.key, required this.productId});
+  final bool readOnly;
+  final String? removeFromMonth;
+  const ProductDetailScreen({
+    super.key,
+    required this.productId,
+    this.readOnly = false,
+    this.removeFromMonth,
+  });
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -51,7 +59,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _api!.getProduct(widget.productId),
       _api!.getProductHistory(widget.productId),
     ]);
-    return _DetailData(results[0] as Product, results[1] as List<Purchase>);
+    final history = results[1] as List<Purchase>
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return _DetailData(results[0] as Product, history);
   }
 
   void _reload() => setState(() {
@@ -63,8 +73,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final dataRefresh = DataScope.of(context);
     try {
-      await _api!.updateProductStatus(
-          widget.productId, productStatusToString(status));
+      final updated = await _api!
+          .updateProductStatus(widget.productId, productStatusToString(status));
+      try {
+        await NotificationService.instance.syncProductStatusReminder(
+          product: updated,
+          strings: s,
+        );
+      } catch (error, stackTrace) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stackTrace,
+            library: 'notifications',
+            context: ErrorDescription(
+              'while scheduling a product status reminder',
+            ),
+          ),
+        );
+      }
       _changed = true;
       dataRefresh.bump();
       if (mounted) {
@@ -76,12 +103,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  Future<void> _recordPurchase() async {
-    final done = await Navigator.push<bool>(
+  Future<void> _edit(Product product) async {
+    final updated = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const RecordPurchaseScreen()),
+      MaterialPageRoute(
+        builder: (_) => AddProductScreen(initialProduct: product),
+      ),
     );
-    if (done == true) {
+    if (updated == true && mounted) {
       _changed = true;
       _reload();
     }
@@ -92,10 +121,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final dataRefresh = DataScope.of(context);
     final navigator = Navigator.of(context);
+    final monthLabel = widget.removeFromMonth == null
+        ? null
+        : DateFormat('MMMM yyyy', context.locale.lang)
+            .format(DateTime.parse('${widget.removeFromMonth!}-01'));
     final confirmed = await showConfirmDialog(
       context,
-      title: s.deleteProductConfirmTitle,
-      message: s.deleteProductConfirmMessage(p.name),
+      title: widget.removeFromMonth == null
+          ? s.deleteProductConfirmTitle
+          : s.removeProductFromMonthTitle,
+      message: widget.removeFromMonth == null
+          ? s.deleteProductConfirmMessage(p.name)
+          : s.removeProductFromMonthMessage(p.name, monthLabel!),
       confirmLabel: s.delete,
       cancelLabel: s.cancel,
       icon: Icons.delete_outline_rounded,
@@ -103,10 +140,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
     if (!confirmed) return;
     try {
-      await _api!.deleteProduct(p.productId);
+      if (widget.removeFromMonth != null) {
+        await _api!.removeProductFromMonth(
+          p.productId,
+          widget.removeFromMonth!,
+        );
+      } else {
+        await _api!.deleteProduct(p.productId);
+        try {
+          await NotificationService.instance.cancelProductStatusReminder(
+            productId: p.productId,
+          );
+        } catch (error, stackTrace) {
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stackTrace,
+              library: 'notifications',
+              context: ErrorDescription(
+                'while cancelling a product status reminder',
+              ),
+            ),
+          );
+        }
+      }
       dataRefresh.bump();
       if (mounted) {
-        AppSnackBar.show(messenger, s.productDeleted, SnackKind.success);
+        AppSnackBar.show(
+          messenger,
+          widget.removeFromMonth == null
+              ? s.productDeleted
+              : s.productRemovedFromMonth,
+          SnackKind.success,
+        );
         navigator.pop(true);
       }
     } catch (e) {
@@ -145,8 +211,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   }
                   return _Body(
                     data: snap.data!,
+                    readOnly: widget.readOnly,
                     onSetStatus: _setStatus,
-                    onRecordPurchase: _recordPurchase,
+                    onEdit: _edit,
                     onDelete: _delete,
                   );
                 },
@@ -172,13 +239,15 @@ StockStatus _stockStatusOf(ProductStatus s) {
 
 class _Body extends StatelessWidget {
   final _DetailData data;
+  final bool readOnly;
   final ValueChanged<ProductStatus> onSetStatus;
-  final VoidCallback onRecordPurchase;
+  final ValueChanged<Product> onEdit;
   final ValueChanged<Product> onDelete;
   const _Body({
     required this.data,
+    required this.readOnly,
     required this.onSetStatus,
-    required this.onRecordPurchase,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -187,26 +256,27 @@ class _Body extends StatelessWidget {
     final s = context.strings;
     final baht = NumberFormat.currency(
         locale: context.locale.lang, symbol: '฿', decimalDigits: 0);
+    final unitBaht = NumberFormat.currency(
+        locale: context.locale.lang, symbol: '฿', decimalDigits: 2);
     final df = DateFormat('d MMM yyyy', context.locale.lang);
     final p = data.product;
     final img = _decode(p.imageBase64);
     final meta = [
       s.categoryName(categoryToString(p.category)),
-      if (p.sizeLabel.isNotEmpty) p.sizeLabel,
-      if ((p.unitLabel ?? '').isNotEmpty) p.unitLabel!,
+      if (!readOnly && p.sizeLabel.isNotEmpty) p.sizeLabel,
     ].join(' · ');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 32),
       children: [
-        // header card: image + name + meta + badges
+        // Product identity and catalog attributes.
         AppCard(
           child: Row(
             children: [
               Container(
-                width: 72,
-                height: 72,
+                width: readOnly ? 96 : 72,
+                height: readOnly ? 96 : 72,
                 decoration: BoxDecoration(
                   color: AppColors.brand100,
                   borderRadius: AppRadius.rMd,
@@ -225,48 +295,48 @@ class _Body extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(p.name,
-                        style: Theme.of(context).textTheme.titleLarge),
+                    Text(p.name, style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 4),
-                    Text(meta,
-                        style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        StatusChip(
-                          status: _stockStatusOf(p.status),
-                          label: {
-                            ProductStatus.inStock: s.productStatusInStock,
-                            ProductStatus.low: s.productStatusLow,
-                            ProductStatus.out: s.productStatusOut,
-                          }[p.status]!,
-                        ),
-                        if (p.isRecurring) ...[
-                          const SizedBox(width: AppSpacing.sm),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.brand100,
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.pill),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.autorenew_rounded,
-                                    size: 12, color: AppColors.brand600),
-                                const SizedBox(width: 2),
-                                Text(s.recurringBadge,
-                                    style: AppType.caption.copyWith(
-                                        color: AppColors.brand600,
-                                        fontWeight: FontWeight.w700)),
-                              ],
-                            ),
+                    Text(meta, style: Theme.of(context).textTheme.bodyMedium),
+                    if (!readOnly) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          StatusChip(
+                            status: _stockStatusOf(p.status),
+                            label: {
+                              ProductStatus.inStock: s.productStatusInStock,
+                              ProductStatus.low: s.productStatusLow,
+                              ProductStatus.out: s.productStatusOut,
+                            }[p.status]!,
                           ),
+                          if (p.isRecurring) ...[
+                            const SizedBox(width: AppSpacing.sm),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.brand100,
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.pill),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.autorenew_rounded,
+                                      size: 12, color: AppColors.brand600),
+                                  const SizedBox(width: 2),
+                                  Text(s.recurringBadge,
+                                      style: AppType.caption.copyWith(
+                                          color: AppColors.brand600,
+                                          fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -274,49 +344,92 @@ class _Body extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: AppSpacing.lg),
-        SectionHeader(title: s.statusSection),
-        const SizedBox(height: AppSpacing.sm),
-        // status action buttons
-        Row(
-          children: [
-            Expanded(
-              child: _StatusButton(
-                label: s.markLowButton,
-                color: AppColors.warning,
-                selected: p.status == ProductStatus.low,
-                onTap: () => onSetStatus(ProductStatus.low),
+        if (!readOnly) ...[
+          const SizedBox(height: AppSpacing.lg),
+          SectionHeader(title: s.statusSection),
+          Padding(
+            padding: const EdgeInsets.only(
+              left: AppSpacing.xs,
+              bottom: AppSpacing.sm,
+            ),
+            child: Text(
+              s.statusActionHint,
+              style: AppType.caption.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatusButton(
-                label: s.markOutButton,
-                color: AppColors.danger,
-                selected: p.status == ProductStatus.out,
-                onTap: () => onSetStatus(ProductStatus.out),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _StatusButton(
+                  label: s.markLowButton,
+                  color: AppColors.statusLow,
+                  foregroundColor: AppColors.warning,
+                  selectedForeground: AppColors.statusLowForeground,
+                  icon: Icons.warning_amber_rounded,
+                  selected: p.status == ProductStatus.low,
+                  onTap: () => onSetStatus(ProductStatus.low),
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatusButton(
-                label: s.markInStockButton,
-                color: AppColors.success,
-                selected: p.status == ProductStatus.inStock,
-                onTap: () => onSetStatus(ProductStatus.inStock),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _StatusButton(
+                  label: s.markOutButton,
+                  color: AppColors.danger,
+                  icon: Icons.inventory_2_outlined,
+                  selected: p.status == ProductStatus.out,
+                  onTap: () => onSetStatus(ProductStatus.out),
+                ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _StatusButton(
+                  label: s.markInStockButton,
+                  color: AppColors.success,
+                  icon: Icons.inventory_rounded,
+                  selected: p.status == ProductStatus.inStock,
+                  onTap: () => onSetStatus(ProductStatus.inStock),
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        if (readOnly) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.pricePerUnit,
+                    style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  data.history.isEmpty
+                      ? s.noPriceHistory
+                      : unitBaht.format(data.history.first.price),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+                if (p.sizeLabel.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(s.productSize,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(p.sizeLabel,
+                      style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
 
         const SizedBox(height: AppSpacing.lg),
         SectionHeader(
           title: s.purchaseHistory,
-          action: TextButton.icon(
-            onPressed: onRecordPurchase,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(s.recordPurchaseAction),
-          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         if (data.history.isEmpty)
@@ -363,16 +476,35 @@ class _Body extends StatelessWidget {
                 ),
               )),
 
-        const SizedBox(height: AppSpacing.lg),
-        OutlinedButton.icon(
-          onPressed: () => onDelete(p),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.danger,
-            side: const BorderSide(color: AppColors.danger),
+        if (readOnly) ...[
+          const SizedBox(height: AppSpacing.lg),
+          OutlinedButton.icon(
+            onPressed: () => onEdit(p),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: Text(s.editProductTitle),
           ),
-          icon: const Icon(Icons.delete_outline_rounded, size: 18),
-          label: Text(s.deleteItem),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: () => onDelete(p),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.danger,
+              side: const BorderSide(color: AppColors.danger),
+            ),
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            label: Text(s.deleteItem),
+          ),
+        ] else ...[
+          const SizedBox(height: AppSpacing.lg),
+          OutlinedButton.icon(
+            onPressed: () => onDelete(p),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.danger,
+              side: const BorderSide(color: AppColors.danger),
+            ),
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            label: Text(s.deleteItem),
+          ),
+        ],
       ],
     );
   }
@@ -390,33 +522,69 @@ class _Body extends StatelessWidget {
 class _StatusButton extends StatelessWidget {
   final String label;
   final Color color;
+  final Color? foregroundColor;
+  final Color selectedForeground;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
   const _StatusButton({
     required this.label,
     required this.color,
+    this.foregroundColor,
+    this.selectedForeground = Colors.white,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Material(
-      color: selected ? color : color.withValues(alpha: 0.12),
+      color:
+          selected ? color : theme.colorScheme.surface.withValues(alpha: 0.88),
       borderRadius: AppRadius.rMd,
       child: InkWell(
         onTap: onTap,
+        mouseCursor: SystemMouseCursors.click,
         borderRadius: AppRadius.rMd,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppType.label.copyWith(
-              color: selected ? Colors.white : color,
-              fontWeight: FontWeight.w700,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.rMd,
+            border: Border.all(
+              color: selected ? color : color.withValues(alpha: 0.55),
+              width: selected ? 1.8 : 1.2,
             ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                selected ? Icons.check_circle_rounded : icon,
+                size: 20,
+                color:
+                    selected ? selectedForeground : (foregroundColor ?? color),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppType.label.copyWith(
+                  color: selected
+                      ? selectedForeground
+                      : (foregroundColor ?? theme.colorScheme.onSurface),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),

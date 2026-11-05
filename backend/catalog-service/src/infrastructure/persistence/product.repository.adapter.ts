@@ -5,6 +5,7 @@ import { ProductRepositoryPort } from '../../domain/port/product.repository.port
 import { Product } from '../../domain/model/product';
 import { Category } from '../../shared/categories';
 import { ProductRecord } from './orm/product.persistence';
+import { ProductMonthExclusionRecord } from './orm/product-month-exclusion.persistence';
 import { ProductMapper } from './mapper/product.mapper';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class ProductRepositoryAdapter implements ProductRepositoryPort {
   constructor(
     @InjectRepository(ProductRecord)
     private readonly products: Repository<ProductRecord>,
+    @InjectRepository(ProductMonthExclusionRecord)
+    private readonly monthExclusions: Repository<ProductMonthExclusionRecord>,
   ) {}
 
   async create(product: Product): Promise<Product> {
@@ -46,7 +49,27 @@ export class ProductRepositoryAdapter implements ProductRepositoryPort {
   }
 
   async delete(productId: string, ssoId: string): Promise<void> {
+    await this.monthExclusions.delete({ productId, ssoId });
     await this.products.delete({ productId, ssoId });
+  }
+
+  async excludeFromMonth(
+    productId: string,
+    ssoId: string,
+    month: string,
+  ): Promise<void> {
+    await this.monthExclusions.upsert(
+      { productId, ssoId, month },
+      ['ssoId', 'productId', 'month'],
+    );
+  }
+
+  async findExcludedProductIds(ssoId: string, month: string): Promise<string[]> {
+    const records = await this.monthExclusions.find({
+      where: { ssoId, month },
+      select: { productId: true },
+    });
+    return records.map((record) => record.productId);
   }
 
   async count(ssoId: string): Promise<number> {

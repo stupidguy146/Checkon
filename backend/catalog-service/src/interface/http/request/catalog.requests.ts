@@ -27,8 +27,6 @@ export class CreateItemRequest {
 
   @IsInt() @Min(0) @Max(100000) quantity: number;
 
-  @IsOptional() @IsString() @MaxLength(40) unitLabel?: string;
-
   @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) price: number;
 
   @IsOptional() @IsString() @MaxLength(120) store?: string;
@@ -46,7 +44,6 @@ export class UpdateItemRequest {
   @IsOptional() @IsString() @MaxLength(40) size?: string;
   @IsOptional() @IsString() @MaxLength(40) unit?: string;
   @IsOptional() @IsInt() @Min(0) @Max(100000) quantity?: number;
-  @IsOptional() @IsString() @MaxLength(40) unitLabel?: string;
   @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) price?: number;
   @IsOptional() @IsString() @MaxLength(120) store?: string;
   @IsOptional() @IsDateString() purchaseDate?: string;

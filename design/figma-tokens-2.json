@@ -3,28 +3,28 @@
         "color": {
             "primary": {
                 "blue": {
-                    "value": "#0878B5",
+                    "value": "#246FC4",
                     "type": "color",
-                    "description": "Logo-derived ocean blue with accessible contrast for primary actions"
+                    "description": "Sky blue primary with accessible contrast for primary actions"
                 },
                 "softBlue": {
-                    "value": "#DDF3FF",
+                    "value": "#DDEBFB",
                     "type": "color",
-                    "description": "Logo-derived soft sky blue for selected and supporting surfaces"
+                    "description": "Soft sky blue for selected and supporting surfaces"
                 },
                 "warmWhite": {
-                    "value": "#F1FAFF",
+                    "value": "#F4F8FF",
                     "type": "color",
                     "description": "Cloud-white primary background"
                 }
             },
             "aero": {
                 "skyBlue": {
-                    "value": "#62C3F5",
+                    "value": "#62A5F5",
                     "type": "color"
                 },
                 "oceanBlue": {
-                    "value": "#0878B5",
+                    "value": "#246FC4",
                     "type": "color"
                 },
                 "aqua": {
@@ -44,11 +44,31 @@
                     "type": "color"
                 },
                 "iceBlue": {
-                    "value": "#E5F5FF",
+                    "value": "#E8F2FE",
                     "type": "color"
                 }
             },
             "secondary": {
+                "tennisGreen": {
+                    "value": "#C6E82F",
+                    "type": "color",
+                    "description": "Tennis-ball green for light-mode button fills and small accents"
+                },
+                "tennisGreenSurface": {
+                    "value": "#EAF6B2",
+                    "type": "color",
+                    "description": "Soft tennis-green surface for tonal buttons"
+                },
+                "green": {
+                    "value": "#237A4A",
+                    "type": "color",
+                    "description": "Deep green for dark-mode action buttons and success states"
+                },
+                "mint": {
+                    "value": "#BDEFD8",
+                    "type": "color",
+                    "description": "Soft green for secondary surfaces"
+                },
                 "sageGreen": {
                     "value": "#DDF4E6",
                     "type": "color",
@@ -87,11 +107,11 @@
             },
             "surface": {
                 "background": {
-                    "value": "#F1FAFF",
+                    "value": "#F4F8FF",
                     "type": "color"
                 },
                 "secondary": {
-                    "value": "#EAF7FE",
+                    "value": "#EDF4FE",
                     "type": "color"
                 },
                 "elevated": {
@@ -109,15 +129,15 @@
             },
             "gradient": {
                 "brand": {
-                    "value": "linear-gradient(135deg, #62C3F5 0%, #8BD8F8 55%, #DDF3FF 100%)",
+                    "value": "linear-gradient(135deg, #62A5F5 0%, #90BDF3 55%, #DDEBFB 100%)",
                     "type": "gradient"
                 },
                 "sky": {
-                    "value": "linear-gradient(135deg, #62C3F5 0%, #168FDB 55%, #0878B5 100%)",
+                    "value": "linear-gradient(135deg, #62A5F5 0%, #3D88E0 55%, #246FC4 100%)",
                     "type": "gradient"
                 },
                 "aqua": {
-                    "value": "linear-gradient(135deg, #35C4D8 0%, #168FDB 100%)",
+                    "value": "linear-gradient(135deg, #35C4D8 0%, #3D88E0 100%)",
                     "type": "gradient"
                 }
             }
@@ -346,7 +366,7 @@
             "type": "boxShadow"
         },
         "glass": {
-            "value": "0 8px 20px #0878B514",
+            "value": "0 8px 20px #246FC414",
             "type": "boxShadow"
         }
     },

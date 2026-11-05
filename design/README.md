@@ -53,7 +53,10 @@ Tokens Studio ตั้งค่า sync กับ repo โดยตรงได
 ### สี (Color)
 | กลุ่ม | ใช้ทำอะไร |
 |------|-----------|
-| `brand.50–900` | สีฟ้าหลักจากโลโก้ — primary = `brand.600` `#0878B5` |
+| `brand.50–900` | สีฟ้าท้องฟ้าเป็นสีหลัก — primary = `brand.600` `#246FC4` |
+| `secondary.tennisGreen` | พื้นปุ่ม action ใน light mode และจุดเน้นขนาดเล็ก |
+| `secondary.green` | พื้นปุ่ม action ใน dark mode และสถานะสำเร็จ |
+| `secondary.tennisGreenSurface` / `secondary.mint` | พื้นผิวเขียวโทนอ่อน |
 | `accent.400–600` | สีเน้น (amber) — ใช้กับหน้าแจ้งเตือน/เงิน |
 | `semantic.*` | success / warning / danger / info |
 | `neutral.0–900` | สีเทา/พื้นหลัง/ตัวอักษร |

@@ -167,8 +167,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                       child: Column(
                         children: [
                           _row(context, s.sizeLabel, item.sizeLabel),
-                          _row(context, s.quantity,
-                              '${item.quantity} ${item.unitLabel ?? s.pieces}'),
+                          _row(context, s.quantity, '${item.quantity}'),
                           _row(context, s.unitPrice, baht.format(item.price)),
                           _row(context, s.total, baht.format(item.subtotal)),
                           if ((item.store ?? '').isNotEmpty)
@@ -188,9 +187,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     if (item.quantity > 0)
                       FilledButton.icon(
                         onPressed: () => _markOut(item),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.shouldBuy,
-                        ),
                         icon: const Icon(Icons.remove_shopping_cart_outlined,
                             size: 18),
                         label: Text(s.markOutButton),

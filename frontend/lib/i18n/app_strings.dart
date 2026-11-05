@@ -37,6 +37,8 @@ class AppStrings {
   String get createAccount => _t('สร้างบัญชีใหม่', 'Create account');
   String get registerSubtitle => _t('เริ่มจัดการรายการซื้อของใช้ในบ้านของคุณ',
       'Start managing your household shopping list');
+  String get registerJourneyProfile => _t('ข้อมูลบัญชี', 'Account details');
+  String get registerJourneyPassword => _t('ตั้งรหัสผ่าน', 'Set password');
   String get displayName => _t('ชื่อที่แสดง', 'Display name');
   String get enterDisplayName => _t('กรอกชื่อที่แสดง', 'Enter a display name');
   String get firstName => _t('ชื่อจริง', 'First name');
@@ -259,6 +261,8 @@ class AppStrings {
       'เติมข้อมูลสินค้าแล้ว ตรวจสอบก่อนกดบันทึก',
       'Product details filled in. Review them before saving.');
   String get quantity => _t('จำนวน', 'Quantity');
+  String get increaseQuantity => _t('เพิ่มจำนวน', 'Increase quantity');
+  String get decreaseQuantity => _t('ลดจำนวน', 'Decrease quantity');
   String get unitPrice => _t('ราคา (บาท)', 'Price (THB)');
   String get pickExpiry =>
       _t('เลือกวันหมดอายุ (ไม่บังคับ)', 'Pick expiry date (optional)');
@@ -341,20 +345,6 @@ class AppStrings {
   String get categoryAll => _t('ทั้งหมด', 'All');
   String get sizeLabel => _t('ขนาด', 'Size');
   String get unitFieldLabel => _t('หน่วย', 'Unit');
-  String get unitLabelField => _t('หน่วยนับ', 'Count unit');
-  String get noUnitCount => _t('ไม่ระบุ', 'None');
-  String get unitCountPiece => _t('ชิ้น', 'Piece');
-  String get unitCountBottle => _t('ขวด', 'Bottle');
-  String get unitCountCan => _t('กระป๋อง', 'Can');
-  String get unitCountBox => _t('กล่อง', 'Box');
-  String get unitCountPack => _t('แพ็ค', 'Pack');
-  String get unitCountBag => _t('ถุง', 'Bag');
-  String get unitCountRoll => _t('ม้วน', 'Roll');
-  String get unitCountTube => _t('หลอด', 'Tube');
-  String get unitCountSheet => _t('แผ่น', 'Sheet');
-  String get unitCountPair => _t('คู่', 'Pair');
-  String get unitCountJar => _t('กระปุก', 'Jar');
-  String get unitCountPacket => _t('ซอง', 'Packet');
   String get storeLabel => _t('ร้านค้าที่ซื้อ', 'Store');
   String get purchaseDateLabel => _t('วันที่ซื้อ', 'Purchase date');
   String get buyerLabel => _t('ผู้ซื้อ', 'Buyer');
@@ -456,6 +446,7 @@ class AppStrings {
       _t('ของใช้ทุกชิ้นยังมีเพียงพอ', 'All your items are well stocked');
   String get toBuyOutSection => _t('หมดแล้ว', 'Out of stock');
   String get toBuyLowSection => _t('ใกล้หมด', 'Running low');
+  String get selectAll => _t('เลือกทั้งหมด', 'Select all');
   String get buyButton => _t('ซื้อ', 'Buy');
   String selectedItems(int count) =>
       _t('เลือกแล้ว $count รายการ', '$count selected');
@@ -463,7 +454,6 @@ class AppStrings {
       _t('ซื้อรายการที่เลือก ($count)', 'Buy selected ($count)');
   String purchaseBatchSaved(int count) =>
       _t('บันทึกการซื้อแล้ว $count รายการ', 'Recorded $count purchases');
-  String get estimatedTotal => _t('ยอดรวมโดยประมาณ', 'Estimated total');
   String get checkout => _t('ส่งซื้อ / ซื้อแล้ว', 'Mark as bought');
   String checkoutDone(int n) =>
       _t('ทำเครื่องหมายซื้อแล้ว $n รายการ', 'Marked $n items as bought');
@@ -562,11 +552,27 @@ class AppStrings {
 
   // ---------- product detail screen ----------
   String get productDetailTitle => _t('รายละเอียดสินค้า', 'Product details');
+  String get editProductTitle => _t('แก้ไขสินค้า', 'Edit product');
+  String get productUpdated => _t('แก้ไขสินค้าแล้ว', 'Product updated');
+  String get saveChanges => _t('บันทึกการแก้ไข', 'Save changes');
+  String get pricePerUnit => _t('ราคาต่อชิ้น', 'Price per item');
+  String get noPriceHistory =>
+      _t('ยังไม่มีข้อมูลราคา', 'No price information yet');
+  String get productSize => _t('ขนาดสินค้า', 'Product size');
   String get statusSection => _t('สถานะ', 'Status');
+  String get statusActionHint => _t('แตะปุ่มเพื่อเปลี่ยนสถานะสินค้า',
+      'Tap a button to change product status');
   String get currentStatus => _t('สถานะปัจจุบัน', 'Current status');
   String get markLowButton => _t('ใกล้หมด', 'Running low');
   String get markInStockButton => _t('เติมแล้ว / มีของ', 'Restocked');
   String get statusUpdated => _t('อัปเดตสถานะแล้ว', 'Status updated');
+  String get productLowReminderTitle => _t('ของใกล้หมด', 'Running low');
+  String productLowReminderBody(String name) => _t(
+      '$name ใกล้หมดแล้ว อย่าลืมซื้อ',
+      '$name is running low. Remember to buy it.');
+  String get productOutReminderTitle => _t('ของหมดแล้ว', 'Out of stock');
+  String productOutReminderBody(String name) =>
+      _t('$name หมดแล้ว อย่าลืมซื้อ', '$name is out. Remember to buy it.');
   String get noPurchaseHistory =>
       _t('ยังไม่มีประวัติการซื้อ', 'No purchase history yet');
   String get recordPurchaseAction => _t('บันทึกการซื้อ', 'Record a purchase');
@@ -577,6 +583,14 @@ class AppStrings {
       'คุณต้องการลบ "$name" และประวัติการซื้อทั้งหมดใช่ไหม? การลบนี้ย้อนกลับไม่ได้',
       'Delete "$name" and all its purchase history? This cannot be undone.');
   String get productDeleted => _t('ลบสินค้าแล้ว', 'Product deleted');
+  String get removeProductFromMonthTitle =>
+      _t('ลบสินค้าในเดือนนี้?', 'Delete for this month?');
+  String removeProductFromMonthMessage(String name, String month) => _t(
+        'ลบ "$name" ออกจากรายการของใช้เดือน $month ใช่ไหม?',
+        'Remove "$name" from the items list for $month?',
+      );
+  String get productRemovedFromMonth =>
+      _t('นำสินค้าออกจากรายการเดือนนี้แล้ว', 'Product removed from this month');
 
   // add product screen
   String get addProductTitle => _t('เพิ่มสินค้า', 'Add product');
@@ -588,7 +602,6 @@ class AppStrings {
       'Record the first purchase too. Leave blank if not bought yet.');
   String get enterProductName => _t('กรอกชื่อสินค้า', 'Enter the product name');
   String get productSaved => _t('เพิ่มสินค้าแล้ว', 'Product added');
-  String get unitCountLabel => _t('หน่วยนับ', 'Count unit');
 
   // monthly summary (shown inside the budget tab)
   String get grandTotalLabel => _t('ยอดรวม', 'Total spend');

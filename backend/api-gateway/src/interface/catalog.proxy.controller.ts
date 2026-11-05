@@ -201,6 +201,22 @@ export class CatalogProxyController {
     );
   }
 
+  @Delete('products/:productId/month')
+  @HttpCode(204)
+  removeProductFromMonth(
+    @Req() req: Request,
+    @Param('productId') productId: string,
+    @Query('month') month?: string,
+  ) {
+    return this.proxy.forwardToCatalog(
+      'DELETE',
+      `/catalog/products/${productId}/month`,
+      undefined,
+      { month },
+      this.sso(req),
+    );
+  }
+
   @Post('products/:productId/purchases')
   addPurchase(
     @Req() req: Request,

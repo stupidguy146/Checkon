@@ -5,6 +5,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/expiring_item.dart';
+import '../models/product.dart';
 import '../i18n/app_strings.dart';
 
 /// Schedules **local** notifications (fired by the OS, not a server) that
@@ -24,10 +25,12 @@ class NotificationService {
   static const int thresholdDays = 3;
   static const int _notifyHour = 9; // 09:00 local
 
-  /// Notification ids are derived from the item id; kept in a stable range so
-  /// [cancelAll] via the plugin clears exactly what we scheduled.
+  /// Notification ids are namespaced so syncing one category cannot cancel
+  /// reminders belonging to another.
   static const String _channelId = 'expiring_items';
   static const String _channelName = 'Expiring items';
+  static const String _productChannelId = 'product_status';
+  static const String _productChannelName = 'Product status';
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -106,15 +109,24 @@ class NotificationService {
     return false;
   }
 
-  /// Cancel the previous batch and (re)schedule reminders for every item that
-  /// expires within [thresholdDays]. [strings] localises title/body.
+  /// Replace expiring-item reminders without disturbing product-status
+  /// reminders. [strings] localises title/body.
   Future<void> syncExpiring(
     List<ExpiringItem> items,
     AppStrings strings,
   ) async {
     if (kIsWeb) return;
     await init();
-    await _plugin.cancelAll();
+    final pending = await _plugin.pendingNotificationRequests();
+    for (final request in pending) {
+      final isLegacyExpiring = request.payload == null &&
+          (request.title == strings.notiExpiringTitle ||
+              request.title == strings.notiRecurringTitle);
+      if (isLegacyExpiring ||
+          request.payload?.startsWith('expiring:') == true) {
+        await _plugin.cancel(id: request.id);
+      }
+    }
 
     final eligible = items.where((it) {
       final d = it.daysUntilExpiry;
@@ -134,7 +146,7 @@ class NotificationService {
               : strings.notiExpiringBody(it.name, days));
 
       await _plugin.zonedSchedule(
-        id: _idFor(it.itemId),
+        id: _idFor('expiring:${it.itemId}'),
         title: title,
         body: body,
         scheduledDate: when,
@@ -157,8 +169,63 @@ class NotificationService {
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: 'expiring:${it.itemId}',
       );
     }
+  }
+
+  /// Remind the user the next day about products marked low or out. Returning
+  /// a product to stock cancels its pending reminder.
+  Future<void> syncProductStatusReminder({
+    required Product product,
+    required AppStrings strings,
+  }) async {
+    if (kIsWeb) return;
+    await init();
+    await cancelProductStatusReminder(productId: product.productId);
+    if (product.status == ProductStatus.inStock) return;
+
+    final payload = 'product-status:${product.productId}';
+    final id = _idFor(payload);
+    final isOut = product.status == ProductStatus.out;
+    await _plugin.zonedSchedule(
+      id: id,
+      title: isOut
+          ? strings.productOutReminderTitle
+          : strings.productLowReminderTitle,
+      body: isOut
+          ? strings.productOutReminderBody(product.name)
+          : strings.productLowReminderBody(product.name),
+      scheduledDate: _tomorrowNineAm(),
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _productChannelId,
+          _productChannelName,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+        macOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: payload,
+    );
+  }
+
+  Future<void> cancelProductStatusReminder({
+    required String productId,
+  }) async {
+    if (kIsWeb) return;
+    await init();
+    await _plugin.cancel(id: _idFor('product-status:$productId'));
   }
 
   /// Cancel all scheduled reminders (e.g. on logout). No-op on web.
@@ -180,6 +247,23 @@ class NotificationService {
     return scheduled;
   }
 
-  /// Stable, positive 31-bit id derived from the item id.
-  int _idFor(String itemId) => itemId.hashCode & 0x7fffffff;
+  tz.TZDateTime _tomorrowNineAm() {
+    final now = tz.TZDateTime.now(tz.local);
+    return tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day + 1,
+      _notifyHour,
+    );
+  }
+
+  /// Stable, positive 31-bit id derived from the notification key.
+  int _idFor(String key) {
+    var hash = 0x811c9dc5;
+    for (final codeUnit in key.codeUnits) {
+      hash = ((hash ^ codeUnit) * 0x01000193) & 0xffffffff;
+    }
+    return hash & 0x7fffffff;
+  }
 }

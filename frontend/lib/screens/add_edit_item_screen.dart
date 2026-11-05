@@ -13,7 +13,7 @@ import '../widgets/app_widgets.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/auth_scope.dart';
 import '../state/data_refresh.dart';
-import '../i18n/app_strings.dart';
+
 import '../i18n/locale_scope.dart';
 import 'barcode_scanner_screen.dart';
 import '../validators/item_form_validators.dart';
@@ -167,7 +167,6 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
 
   ApiService? _api;
   ItemCategory _category = ItemCategory.other;
-  String? _unitLabel;
   DateTime? _purchaseDate;
   DateTime? _expiryDate;
   String? _image;
@@ -189,8 +188,6 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
     _size = TextEditingController(text: e?.size ?? '');
     _unit = TextEditingController(text: e?.unit ?? '');
     _qty = TextEditingController(text: '${e?.quantity ?? 1}');
-    _unitLabel = e?.unitLabel?.trim();
-    if (_unitLabel?.isEmpty ?? false) _unitLabel = null;
     // price: keep the existing value when editing; leave blank for new items
     // so the user enters it themselves.
     _price = TextEditingController(text: _isEdit ? '${e!.price}' : '');
@@ -236,9 +233,8 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
       final profile =
           await CustomerService(auth: AuthScope.of(context)).getMyProfile();
       if (!mounted) return;
-      final name = profile.fullName.isNotEmpty
-          ? profile.fullName
-          : profile.username;
+      final name =
+          profile.fullName.isNotEmpty ? profile.fullName : profile.username;
       if (name.isNotEmpty && _buyer.text.trim().isEmpty) {
         setState(() => _buyer.text = name);
       }
@@ -251,7 +247,14 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
   void dispose() {
     _productLookup.close();
     for (final c in [
-      _name, _size, _unit, _qty, _price, _store, _buyer, _recurringDays
+      _name,
+      _size,
+      _unit,
+      _qty,
+      _price,
+      _store,
+      _buyer,
+      _recurringDays
     ]) {
       c.dispose();
     }
@@ -345,7 +348,6 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
       'size': _size.text.trim().isEmpty ? null : _size.text.trim(),
       'unit': _unit.text.trim().isEmpty ? null : _unit.text.trim(),
       'quantity': int.tryParse(_qty.text) ?? 1,
-      'unitLabel': _unitLabel,
       'price': double.tryParse(_price.text) ?? 0,
       'store': _store.text.trim().isEmpty ? null : _store.text.trim(),
       'buyer': _buyer.text.trim().isEmpty ? null : _buyer.text.trim(),
@@ -370,8 +372,7 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
         Navigator.pop(context, true);
       }
     } on ApiError catch (e) {
-      AppSnackBar.show(
-          messenger, s.errorForCode(e.code, fallback: e.message),
+      AppSnackBar.show(messenger, s.errorForCode(e.code, fallback: e.message),
           SnackKind.error);
     } catch (e) {
       AppSnackBar.show(messenger, s.errorWith(e), SnackKind.error);
@@ -442,8 +443,8 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                                 child: SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               )
                             : IconButton(
@@ -459,7 +460,7 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    DropdownButtonFormField<ItemCategory>(
+                    AdaptiveDropdownFormField<ItemCategory>(
                       initialValue: _category,
                       decoration: InputDecoration(
                         labelText: s.categoryLabel,
@@ -472,8 +473,8 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                       selectedItemBuilder: (context) => ItemCategory.values
                           .map((c) => Align(
                                 alignment: Alignment.centerLeft,
-                                child: Text(
-                                    s.categoryName(categoryToString(c))),
+                                child:
+                                    Text(s.categoryName(categoryToString(c))),
                               ))
                           .toList(),
                       items: ItemCategory.values
@@ -482,11 +483,9 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                                 child: Row(
                                   children: [
                                     Icon(categoryIcon(c),
-                                        size: 20,
-                                        color: AppColors.brand500),
+                                        size: 20, color: AppColors.brand500),
                                     const SizedBox(width: AppSpacing.md),
-                                    Text(s.categoryName(
-                                        categoryToString(c))),
+                                    Text(s.categoryName(categoryToString(c))),
                                   ],
                                 ),
                               ))
@@ -504,11 +503,11 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                                 decimal: true),
                             inputFormatters: [
                               TextInputFormatter.withFunction(
-                                (oldValue, newValue) =>
-                                    ItemFormValidators.decimalInput
-                                            .hasMatch(newValue.text)
-                                        ? newValue
-                                        : oldValue,
+                                (oldValue, newValue) => ItemFormValidators
+                                        .decimalInput
+                                        .hasMatch(newValue.text)
+                                    ? newValue
+                                    : oldValue,
                               ),
                             ],
                             decoration: InputDecoration(labelText: s.sizeLabel),
@@ -529,7 +528,8 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                             ],
                             decoration:
                                 InputDecoration(labelText: s.unitFieldLabel),
-                            validator: (v) => ItemFormValidators.optionalLetters(
+                            validator: (v) =>
+                                ItemFormValidators.optionalLetters(
                               v,
                               s.lettersOnly,
                             ),
@@ -556,33 +556,6 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _unitLabel ?? '',
-                            decoration: InputDecoration(
-                              labelText: s.unitLabelField,
-                            ),
-                            dropdownColor: Theme.of(context).cardTheme.color,
-                            borderRadius: AppRadius.rMd,
-                            items: [
-                              DropdownMenuItem(
-                                value: '',
-                                child: Text(s.noUnitCount),
-                              ),
-                              for (final label in _unitCountOptions(s))
-                                DropdownMenuItem(
-                                  value: label,
-                                  child: Text(label),
-                                ),
-                            ],
-                            onChanged: (value) => setState(() {
-                              _unitLabel = value == null || value.isEmpty
-                                  ? null
-                                  : value;
-                            }),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -592,11 +565,10 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         TextInputFormatter.withFunction(
-                          (oldValue, newValue) =>
-                              ItemFormValidators.priceInput
-                                      .hasMatch(newValue.text)
-                                  ? newValue
-                                  : oldValue,
+                          (oldValue, newValue) => ItemFormValidators.priceInput
+                                  .hasMatch(newValue.text)
+                              ? newValue
+                              : oldValue,
                         ),
                       ],
                       decoration: InputDecoration(labelText: s.unitPrice),
@@ -630,7 +602,7 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                       icon: Icons.event_outlined,
                       onTap: () async {
                         final now = DateTime.now();
-                        final picked = await showDatePicker(
+                        final picked = await showAdaptiveDatePicker(
                           context: context,
                           initialDate: _purchaseDate ?? now,
                           firstDate: DateTime(now.year - 5),
@@ -665,7 +637,7 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                       icon: Icons.schedule_rounded,
                       onTap: () async {
                         final now = DateTime.now();
-                        final picked = await showDatePicker(
+                        final picked = await showAdaptiveDatePicker(
                           context: context,
                           initialDate: _expiryDate ?? now,
                           firstDate: DateTime(now.year - 1),
@@ -697,8 +669,7 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
                         decoration: InputDecoration(
                           labelText: s.recurringDaysLabel,
                           hintText: s.recurringDaysHint,
-                          prefixIcon:
-                              const Icon(Icons.autorenew_rounded),
+                          prefixIcon: const Icon(Icons.autorenew_rounded),
                           suffixText: s.daysUnit,
                         ),
                         onChanged: (_) => setState(() {}),
@@ -770,27 +741,6 @@ class _AddEditItemScreenState extends State<AddEditItemScreen> {
     }
   }
 
-  List<String> _unitCountOptions(AppStrings s) {
-    final options = [
-      s.unitCountPiece,
-      s.unitCountBottle,
-      s.unitCountCan,
-      s.unitCountBox,
-      s.unitCountPack,
-      s.unitCountBag,
-      s.unitCountRoll,
-      s.unitCountTube,
-      s.unitCountSheet,
-      s.unitCountPair,
-      s.unitCountJar,
-      s.unitCountPacket,
-    ];
-    final current = _unitLabel;
-    if (current != null && !options.contains(current)) {
-      options.insert(0, current);
-    }
-    return options;
-  }
 }
 
 class _Back extends StatelessWidget {

@@ -177,7 +177,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const _VerifyEmailBanner(),
-                      DropdownButtonFormField<String>(
+                      AdaptiveDropdownFormField<String>(
                         initialValue: _title,
                         decoration: InputDecoration(
                           labelText: s.title,
@@ -243,7 +243,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             : s.birthDateOn(df.format(_birthDate!)),
                         onTap: () async {
                           final now = DateTime.now();
-                          final picked = await showDatePicker(
+                          final picked = await showAdaptiveDatePicker(
                             context: context,
                             initialDate: _birthDate ?? DateTime(now.year - 20),
                             firstDate: DateTime(1900),
