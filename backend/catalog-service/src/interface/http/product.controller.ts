@@ -29,6 +29,10 @@ function requireSsoId(ssoId?: string): string {
   return ssoId;
 }
 
+function currentMonth(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
 /**
  * Product master + purchases, under the 'products' prefix.
  *   POST   /products                      create product (+ optional first purchase)
@@ -136,11 +140,16 @@ export class ProductController {
     @Headers(SSO_ID_HEADER) ssoId: string,
     @Param('productId') productId: string,
     @Body() body: UpdateStatusRequest,
+    @Query('month') month?: string,
   ) {
-    const product = await this.products.updateProduct(
+    const activeMonth = currentMonth();
+    if (month && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || month !== activeMonth)) {
+      throw new BadRequestException('Only the current month status can be changed');
+    }
+    const product = await this.products.updateProductStatus(
       productId,
       requireSsoId(ssoId),
-      { status: body.status as ProductStatus },
+      body.status as ProductStatus,
     );
     return ProductPresenter.product(product);
   }
@@ -163,6 +172,9 @@ export class ProductController {
   ) {
     if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
       throw new BadRequestException('month must be in YYYY-MM format');
+    }
+    if (month !== currentMonth()) {
+      throw new BadRequestException('Only current month items can be removed');
     }
     await this.products.excludeProductFromMonth(
       productId,

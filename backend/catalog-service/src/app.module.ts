@@ -6,6 +6,7 @@ import { HouseholdItemRecord } from './infrastructure/persistence/orm/household-
 import { ProductRecord } from './infrastructure/persistence/orm/product.persistence';
 import { PurchaseRecord } from './infrastructure/persistence/orm/purchase.persistence';
 import { ProductMonthExclusionRecord } from './infrastructure/persistence/orm/product-month-exclusion.persistence';
+import { ProductMonthStatusRecord } from './infrastructure/persistence/orm/product-month-status.persistence';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ProductMonthExclusionRecord } from './infrastructure/persistence/orm/pr
           ProductRecord,
           PurchaseRecord,
           ProductMonthExclusionRecord,
+          ProductMonthStatusRecord,
         ],
         synchronize: true, // dev only
       }),

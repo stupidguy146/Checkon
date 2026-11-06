@@ -235,6 +235,11 @@ class _ItemsScreenState extends State<ItemsScreen> {
   String get _monthKey =>
       '${_month.year.toString().padLeft(4, '0')}-${_month.month.toString().padLeft(2, '0')}';
 
+  bool get _isHistoricalMonth {
+    final now = DateTime.now();
+    return _month.isBefore(DateTime(now.year, now.month));
+  }
+
   Future<List<Product>> _load() => _api!.getProductsByMonth(_monthKey);
 
   void _reload() {
@@ -244,6 +249,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   Future<bool> _confirmDelete(Product p) async {
+    if (_isHistoricalMonth) return false;
     final s = context.strings;
     final messenger = ScaffoldMessenger.of(context);
     final dataRefresh = DataScope.of(context);
@@ -292,7 +298,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
             GradientHeader(
               title: s.itemsTitle,
               titleIcon: Icons.inventory_2_rounded,
-              subtitle: s.appTitle,
+              subtitle: _isHistoricalMonth
+                  ? s.historicalItemsReadOnly
+                  : s.itemsLogSubtitle,
             ),
             // month navigator
             Padding(
@@ -404,7 +412,9 @@ class _ItemsScreenState extends State<ItemsScreen> {
                         final p = products[i];
                         return Dismissible(
                           key: ValueKey(p.productId),
-                          direction: DismissDirection.endToStart,
+                          direction: _isHistoricalMonth
+                              ? DismissDirection.none
+                              : DismissDirection.endToStart,
                           confirmDismiss: (_) async {
                             await _confirmDelete(p);
                             return false;
@@ -419,6 +429,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
                                   builder: (_) => ProductDetailScreen(
                                     productId: p.productId,
                                     removeFromMonth: _monthKey,
+                                    readOnly: _isHistoricalMonth,
+                                    historicalSnapshot: _isHistoricalMonth,
                                   ),
                                 ),
                               );
@@ -435,14 +447,16 @@ class _ItemsScreenState extends State<ItemsScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab_items',
-        onPressed: () async {
-          final changed = await showAddProductFlow(context);
-          if (changed) _reload();
-        },
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: _isHistoricalMonth
+          ? null
+          : FloatingActionButton(
+              heroTag: 'fab_items',
+              onPressed: () async {
+                final changed = await showAddProductFlow(context);
+                if (changed) _reload();
+              },
+              child: const Icon(Icons.add_rounded),
+            ),
     );
   }
 }

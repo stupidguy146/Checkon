@@ -328,6 +328,10 @@ class AppStrings {
 
   // ---------- item fields (household item) ----------
   String get itemsTitle => _t('ของใช้', 'Items');
+  String get itemsLogSubtitle =>
+      _t('บันทึกของใช้รายเดือน (Log)', 'Monthly item log');
+  String get historicalItemsReadOnly =>
+      _t('ย้อนหลัง · ดูอย่างเดียว', 'Past · Read only');
   String get itemsMonthSubtitle =>
       _t('ของใช้ในเดือนนี้', 'What you have this month');
   String get noItemsThisMonth =>

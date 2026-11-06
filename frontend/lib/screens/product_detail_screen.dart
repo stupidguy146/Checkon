@@ -29,11 +29,13 @@ class ProductDetailScreen extends StatefulWidget {
   final String productId;
   final bool readOnly;
   final String? removeFromMonth;
+  final bool historicalSnapshot;
   const ProductDetailScreen({
     super.key,
     required this.productId,
     this.readOnly = false,
     this.removeFromMonth,
+    this.historicalSnapshot = false,
   });
 
   @override
@@ -69,12 +71,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       });
 
   Future<void> _setStatus(ProductStatus status) async {
+    if (widget.historicalSnapshot) return;
     final s = context.strings;
     final messenger = ScaffoldMessenger.of(context);
     final dataRefresh = DataScope.of(context);
     try {
-      final updated = await _api!
-          .updateProductStatus(widget.productId, productStatusToString(status));
+      final updated = await _api!.updateProductStatus(
+        widget.productId,
+        productStatusToString(status),
+        month: widget.removeFromMonth,
+      );
       try {
         await NotificationService.instance.syncProductStatusReminder(
           product: updated,
@@ -104,6 +110,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _edit(Product product) async {
+    if (widget.historicalSnapshot) return;
     final updated = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -117,6 +124,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Future<void> _delete(Product p) async {
+    if (widget.historicalSnapshot) return;
     final s = context.strings;
     final messenger = ScaffoldMessenger.of(context);
     final dataRefresh = DataScope.of(context);
@@ -212,6 +220,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   return _Body(
                     data: snap.data!,
                     readOnly: widget.readOnly,
+                    historicalSnapshot: widget.historicalSnapshot,
                     onSetStatus: _setStatus,
                     onEdit: _edit,
                     onDelete: _delete,
@@ -240,12 +249,14 @@ StockStatus _stockStatusOf(ProductStatus s) {
 class _Body extends StatelessWidget {
   final _DetailData data;
   final bool readOnly;
+  final bool historicalSnapshot;
   final ValueChanged<ProductStatus> onSetStatus;
   final ValueChanged<Product> onEdit;
   final ValueChanged<Product> onDelete;
   const _Body({
     required this.data,
     required this.readOnly,
+    required this.historicalSnapshot,
     required this.onSetStatus,
     required this.onEdit,
     required this.onDelete,
@@ -478,21 +489,23 @@ class _Body extends StatelessWidget {
 
         if (readOnly) ...[
           const SizedBox(height: AppSpacing.lg),
-          OutlinedButton.icon(
-            onPressed: () => onEdit(p),
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            label: Text(s.editProductTitle),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          OutlinedButton.icon(
-            onPressed: () => onDelete(p),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.danger,
-              side: const BorderSide(color: AppColors.danger),
+          if (!historicalSnapshot) ...[
+            OutlinedButton.icon(
+              onPressed: () => onEdit(p),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text(s.editProductTitle),
             ),
-            icon: const Icon(Icons.delete_outline_rounded, size: 18),
-            label: Text(s.deleteItem),
-          ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: () => onDelete(p),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.danger,
+                side: const BorderSide(color: AppColors.danger),
+              ),
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              label: Text(s.deleteItem),
+            ),
+          ],
         ] else ...[
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton.icon(

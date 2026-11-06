@@ -83,14 +83,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final summaryFuture = _api!.getSummary();
     final expiringFuture = _api!.getExpiringSoon(days: 30);
     final productsToBuyFuture = _api!.getProductsToBuy();
+    final productsFuture = _api!.getProducts();
     final profileFuture = _loadProfile();
     final results = await Future.wait<Object?>(
-      [summaryFuture, expiringFuture, productsToBuyFuture, profileFuture],
+      [
+        summaryFuture,
+        expiringFuture,
+        productsToBuyFuture,
+        profileFuture,
+        productsFuture,
+      ],
     );
     final summary = results[0] as AnalyticsSummary;
     final expiring = results[1] as List<ExpiringItem>;
     final productsToBuy = results[2] as List<Product>;
     final profile = results[3] as CustomerProfile?;
+    final products = results[4] as List<Product>;
 
     // keep OS reminders in sync on every home load (app start / after login /
     // after add-edit-delete via DataScope). no-op on web.
@@ -106,6 +114,26 @@ class _HomeScreenState extends State<HomeScreen> {
               library: 'notifications',
               context:
                   ErrorDescription('while syncing expiring-item reminders'),
+            ),
+          );
+        }),
+      );
+      unawaited(
+        NotificationService.instance
+            .syncProductStatusRemindersForMonth(
+          products: products,
+          productsToBuy: productsToBuy,
+          strings: context.strings,
+        )
+            .catchError((Object error, StackTrace stackTrace) {
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: error,
+              stack: stackTrace,
+              library: 'notifications',
+              context: ErrorDescription(
+                'while syncing monthly product status reminders',
+              ),
             ),
           );
         }),

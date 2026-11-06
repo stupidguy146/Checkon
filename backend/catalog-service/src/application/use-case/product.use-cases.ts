@@ -19,6 +19,7 @@ import {
 } from '../dto/product.commands';
 
 const today = () => new Date().toISOString().slice(0, 10);
+const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 /** Use-cases for product master + purchases, scoped by owner (ssoId). */
 @Injectable()
@@ -72,10 +73,13 @@ export class ProductUseCases {
 
   /** Products that need restocking — user-driven status `low` or `out`. */
   async productsToBuy(ssoId: string): Promise<Product[]> {
-    const all = await this.products.findAll(ssoId);
+    const activeMonthProducts = await this.productsInUseForMonth(
+      ssoId,
+      currentMonth(),
+    );
     // `out` first (more urgent), then `low`; stable within each group.
     const rank = (s: string) => (s === 'out' ? 0 : s === 'low' ? 1 : 2);
-    return all
+    return activeMonthProducts
         .filter((p) => p.status === 'low' || p.status === 'out')
         .sort((a, b) => rank(a.status) - rank(b.status));
   }
@@ -110,8 +114,29 @@ export class ProductUseCases {
       p.recurringDaysManual = cmd.recurringDaysManual;
     }
     if (cmd.expiryDate !== undefined) p.expiryDate = cmd.expiryDate;
-    if (cmd.status !== undefined) p.status = cmd.status;
+    if (cmd.status !== undefined) {
+      p.status = cmd.status;
+      const saved = await this.products.update(p);
+      await this.products.saveMonthStatuses(ssoId, currentMonth(), [
+        { productId, status: cmd.status },
+      ]);
+      return saved;
+    }
     return this.products.update(p);
+  }
+
+  async updateProductStatus(
+    productId: string,
+    ssoId: string,
+    status: Product['status'],
+  ): Promise<Product> {
+    const product = await this.getProduct(productId, ssoId);
+    product.status = status;
+    const saved = await this.products.update(product);
+    await this.products.saveMonthStatuses(ssoId, currentMonth(), [
+      { productId, status },
+    ]);
+    return saved;
   }
 
   async deleteProduct(productId: string, ssoId: string): Promise<void> {
@@ -131,6 +156,7 @@ export class ProductUseCases {
   /** Record a purchase; buying restocks the product (status → in_stock). */
   async createPurchase(cmd: CreatePurchaseCommand): Promise<Purchase> {
     const product = await this.getProduct(cmd.productId, cmd.ssoId);
+    const purchasedAt = cmd.purchasedAt ?? today();
     const saved = await this.purchases.create(
       new Purchase({
         purchaseId: randomUUID(),
@@ -140,14 +166,19 @@ export class ProductUseCases {
         price: cmd.price,
         buyer: cmd.buyer ?? null,
         store: cmd.store ?? null,
-        purchasedAt: cmd.purchasedAt ?? today(),
+        purchasedAt,
         createdAt: new Date(),
       }),
     );
-    // buying something marks it back in stock
-    if (product.status !== 'in_stock') {
-      product.status = 'in_stock';
-      await this.products.update(product);
+    // Only a purchase in the active month changes live stock state.
+    if (purchasedAt.slice(0, 7) === currentMonth()) {
+      if (product.status !== 'in_stock') {
+        product.status = 'in_stock';
+        await this.products.update(product);
+      }
+      await this.products.saveMonthStatuses(cmd.ssoId, currentMonth(), [
+        { productId: product.productId, status: 'in_stock' },
+      ]);
     }
     return saved;
   }
@@ -159,13 +190,7 @@ export class ProductUseCases {
     return this.purchases.findByMonth(ssoId, month);
   }
 
-  /**
-   * Products "in use" during [month] (yyyy-mm), applying the carry-over rule:
-   * a product counts for month M if it has a purchase in M, OR its first
-   * purchase is in a month before M and it is still not marked `out` (i.e. it
-   * carried over and is still being used). Future months are not considered
-   * (callers pass the current month at most).
-   */
+  /** Return the saved monthly log, carrying only stock/low into the active month. */
   async productsInUseForMonth(
     ssoId: string,
     month: string,
@@ -177,30 +202,134 @@ export class ProductUseCases {
     ]);
     const excluded = new Set(excludedProductIds);
 
-    // per product: earliest purchase month + the set of months with a purchase
-    const firstMonth = new Map<string, string>(); // productId → yyyy-mm
-    const monthsWithPurchase = new Map<string, Set<string>>();
-    for (const p of allPurchases) {
-      const m = p.purchasedAt.slice(0, 7); // yyyy-mm
-      const cur = firstMonth.get(p.productId);
-      if (cur === undefined || m < cur) firstMonth.set(p.productId, m);
-      let set = monthsWithPurchase.get(p.productId);
-      if (!set) {
-        set = new Set<string>();
-        monthsWithPurchase.set(p.productId, set);
+    const purchasesByProduct = new Map<string, Set<string>>();
+    const firstMonth = new Map<string, string>();
+    const productsById = new Map(products.map((product) => [product.productId, product]));
+    for (const purchase of allPurchases) {
+      const purchaseMonth = purchase.purchasedAt.slice(0, 7);
+      const first = firstMonth.get(purchase.productId);
+      if (first === undefined || purchaseMonth < first) {
+        firstMonth.set(purchase.productId, purchaseMonth);
       }
-      set.add(m);
+      let months = purchasesByProduct.get(purchase.productId);
+      if (!months) {
+        months = new Set<string>();
+        purchasesByProduct.set(purchase.productId, months);
+      }
+      months.add(purchaseMonth);
     }
 
-    return products.filter((prod) => {
-      if (excluded.has(prod.productId)) return false;
-      const first = firstMonth.get(prod.productId);
-      if (first === undefined) return false; // never purchased → not "in use"
-      const boughtThisMonth =
-        monthsWithPurchase.get(prod.productId)?.has(month) ?? false;
-      if (boughtThisMonth) return true;
-      // carried over: first purchase before this month AND still not used up
-      return first < month && prod.status !== 'out';
-    });
+    let monthStatuses = await this.products.findMonthStatuses(ssoId, month);
+    if (monthStatuses.length === 0) {
+      const toSave: Array<{ productId: string; status: string }> = [];
+      if (month === currentMonth()) {
+        const [year, monthNumber] = month.split('-').map(Number);
+        const previousMonth = new Date(
+          Date.UTC(year, monthNumber - 2, 1),
+        ).toISOString().slice(0, 7);
+        let previousStatuses =
+          await this.products.findMonthStatuses(ssoId, previousMonth);
+        const previousExcluded = new Set(
+          await this.products.findExcludedProductIds(ssoId, previousMonth),
+        );
+        if (previousStatuses.length === 0) {
+          previousStatuses = products
+            .filter((product) => {
+              const first = firstMonth.get(product.productId);
+              return (
+                !previousExcluded.has(product.productId) &&
+                first !== undefined &&
+                first <= previousMonth
+              );
+            })
+            .map((product) => ({
+              productId: product.productId,
+              status: product.status,
+            }));
+          await this.products.saveMonthStatuses(
+            ssoId,
+            previousMonth,
+            previousStatuses,
+          );
+        }
+
+        for (const product of products) {
+          if (excluded.has(product.productId)) continue;
+          const boughtThisMonth =
+            purchasesByProduct.get(product.productId)?.has(month) ?? false;
+          const previousStatus = previousStatuses.find(
+            (entry) => entry.productId === product.productId,
+          )?.status;
+          if (boughtThisMonth) {
+            toSave.push({
+              productId: product.productId,
+              status: product.status,
+            });
+          } else if (
+            !previousExcluded.has(product.productId) &&
+            (previousStatus === 'in_stock' || previousStatus === 'low')
+          ) {
+            toSave.push({
+              productId: product.productId,
+              status: previousStatus,
+            });
+          }
+        }
+      } else {
+        const previousExcluded = new Set(excludedProductIds);
+        for (const product of products) {
+          const first = firstMonth.get(product.productId);
+          if (
+            !previousExcluded.has(product.productId) &&
+            first !== undefined &&
+            first <= month
+          ) {
+            toSave.push({
+              productId: product.productId,
+              status: product.status,
+            });
+          }
+        }
+      }
+      if (month === currentMonth()) {
+        await Promise.all(
+          toSave.map(async ({ productId, status }) => {
+            const product = productsById.get(productId);
+            if (product && product.status !== status) {
+              product.status = status as Product['status'];
+              await this.products.update(product);
+            }
+          }),
+        );
+      }
+      await this.products.saveMonthStatuses(ssoId, month, toSave);
+      monthStatuses = toSave;
+    } else if (month === currentMonth()) {
+      const knownIds = new Set(monthStatuses.map(({ productId }) => productId));
+      const newPurchases = products
+        .filter(
+          (product) =>
+            !excluded.has(product.productId) &&
+            !knownIds.has(product.productId) &&
+            (purchasesByProduct.get(product.productId)?.has(month) ?? false),
+        )
+        .map((product) => ({
+          productId: product.productId,
+          status: product.status,
+        }));
+      await this.products.saveMonthStatuses(ssoId, month, newPurchases);
+      monthStatuses = [...monthStatuses, ...newPurchases];
+    }
+
+    return monthStatuses
+      .filter(
+        ({ productId }) =>
+          !excluded.has(productId) && productsById.has(productId),
+      )
+      .map(({ productId, status }) => {
+        const product = productsById.get(productId)!;
+        product.status = status as Product['status'];
+        return product;
+      });
   }
 }

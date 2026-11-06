@@ -179,12 +179,13 @@ export class CatalogProxyController {
     @Req() req: Request,
     @Param('productId') productId: string,
     @Body() body: unknown,
+    @Query('month') month?: string,
   ) {
     return this.proxy.forwardToCatalog(
       'PATCH',
       `/catalog/products/${productId}/status`,
       body,
-      undefined,
+      { month },
       this.sso(req),
     );
   }

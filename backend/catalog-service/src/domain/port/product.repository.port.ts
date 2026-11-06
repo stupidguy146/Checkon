@@ -14,6 +14,16 @@ export interface ProductRepositoryPort {
     month: string,
   ): Promise<void>;
   findExcludedProductIds(ssoId: string, month: string): Promise<string[]>;
+  findMonthStatuses(
+    ssoId: string,
+    month: string,
+  ): Promise<Array<{ productId: string; status: string }>>;
+  saveMonthStatuses(
+    ssoId: string,
+    month: string,
+    statuses: Array<{ productId: string; status: string }>,
+  ): Promise<void>;
+  deleteMonthStatuses(productId: string, ssoId: string): Promise<void>;
   count(ssoId: string): Promise<number>;
 }
 

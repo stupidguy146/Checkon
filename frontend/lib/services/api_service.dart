@@ -156,9 +156,14 @@ class ApiService {
     return Product.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  Future<Product> updateProductStatus(String productId, String status) async {
+  Future<Product> updateProductStatus(
+    String productId,
+    String status, {
+    String? month,
+  }) async {
+    final monthQuery = month == null ? '' : '?month=$month';
     final res = await _withAuthRetry(() => _client.patch(
-          _catalog('/products/$productId/status'),
+          _catalog('/products/$productId/status$monthQuery'),
           headers: _headers(json: true),
           body: jsonEncode({'status': status}),
         ));

@@ -220,6 +220,28 @@ class NotificationService {
     );
   }
 
+  Future<void> syncProductStatusRemindersForMonth({
+    required List<Product> products,
+    required List<Product> productsToBuy,
+    required AppStrings strings,
+  }) async {
+    if (kIsWeb) return;
+    final productsToBuyById = {
+      for (final product in productsToBuy) product.productId: product,
+    };
+    for (final product in products) {
+      final activeProduct = productsToBuyById[product.productId];
+      if (activeProduct == null) {
+        await cancelProductStatusReminder(productId: product.productId);
+      } else {
+        await syncProductStatusReminder(
+          product: activeProduct,
+          strings: strings,
+        );
+      }
+    }
+  }
+
   Future<void> cancelProductStatusReminder({
     required String productId,
   }) async {

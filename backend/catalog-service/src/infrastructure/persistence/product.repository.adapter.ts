@@ -6,6 +6,7 @@ import { Product } from '../../domain/model/product';
 import { Category } from '../../shared/categories';
 import { ProductRecord } from './orm/product.persistence';
 import { ProductMonthExclusionRecord } from './orm/product-month-exclusion.persistence';
+import { ProductMonthStatusRecord } from './orm/product-month-status.persistence';
 import { ProductMapper } from './mapper/product.mapper';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class ProductRepositoryAdapter implements ProductRepositoryPort {
     private readonly products: Repository<ProductRecord>,
     @InjectRepository(ProductMonthExclusionRecord)
     private readonly monthExclusions: Repository<ProductMonthExclusionRecord>,
+    @InjectRepository(ProductMonthStatusRecord)
+    private readonly monthStatuses: Repository<ProductMonthStatusRecord>,
   ) {}
 
   async create(product: Product): Promise<Product> {
@@ -50,6 +53,7 @@ export class ProductRepositoryAdapter implements ProductRepositoryPort {
 
   async delete(productId: string, ssoId: string): Promise<void> {
     await this.monthExclusions.delete({ productId, ssoId });
+    await this.monthStatuses.delete({ productId, ssoId });
     await this.products.delete({ productId, ssoId });
   }
 
@@ -70,6 +74,38 @@ export class ProductRepositoryAdapter implements ProductRepositoryPort {
       select: { productId: true },
     });
     return records.map((record) => record.productId);
+  }
+
+  async findMonthStatuses(
+    ssoId: string,
+    month: string,
+  ): Promise<Array<{ productId: string; status: string }>> {
+    const records = await this.monthStatuses.find({
+      where: { ssoId, month },
+      select: { productId: true, status: true },
+    });
+    return records.map(({ productId, status }) => ({ productId, status }));
+  }
+
+  async saveMonthStatuses(
+    ssoId: string,
+    month: string,
+    statuses: Array<{ productId: string; status: string }>,
+  ): Promise<void> {
+    if (statuses.length === 0) return;
+    await this.monthStatuses.upsert(
+      statuses.map(({ productId, status }) => ({
+        ssoId,
+        productId,
+        month,
+        status,
+      })),
+      ['ssoId', 'productId', 'month'],
+    );
+  }
+
+  async deleteMonthStatuses(productId: string, ssoId: string): Promise<void> {
+    await this.monthStatuses.delete({ productId, ssoId });
   }
 
   async count(ssoId: string): Promise<number> {
